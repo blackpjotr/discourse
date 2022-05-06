@@ -242,6 +242,10 @@ const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
         hasGroups,
       });
     },
+
+    setUserStatus() {
+      bootbox.alert("setting user status");
+    },
   },
 
   renderTemplate() {
