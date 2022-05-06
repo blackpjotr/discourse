@@ -4,6 +4,7 @@ import { translateModKey } from "discourse/lib/utilities";
 import ModalFunctionality from "discourse/mixins/modal-functionality";
 import { extraKeyboardShortcutsHelp } from "discourse/lib/keyboard-shortcuts";
 import { action } from "@ember/object";
+import bootbox from "bootbox";
 
 const KEY = "keyboard_shortcuts_help";
 const SHIFT = I18n.t("shortcut_modifier_key.shift");
@@ -341,16 +342,8 @@ export default Controller.extend(ModalFunctionality, {
 
   @action
   saveAndClose() {
-    if (this._saving || this._deleting) {
-      return;
-    }
-
-    this._saving = true;
-    this._savingBookmarkManually = true;
-    return this._saveBookmark()
-      .then(() => this.closeModal())
-      .catch((e) => this._handleSaveError(e))
-      .finally(() => (this._saving = false));
+    this.send("closeModal");
+    bootbox.alert("Status is set.");
   },
 
   @action
