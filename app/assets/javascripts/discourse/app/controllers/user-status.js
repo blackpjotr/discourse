@@ -62,7 +62,6 @@ function buildShortcut(
 
 export default Controller.extend(ModalFunctionality, {
   onShow() {
-    this.set("modal.modalClass", "keyboard-shortcuts-modal");
     this._defineShortcuts();
   },
 

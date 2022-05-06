@@ -246,6 +246,7 @@ const ApplicationRoute = DiscourseRoute.extend(OpenComposer, {
     setUserStatus() {
       showModal("user-status", {
         title: "user_status.set_custom_status",
+        modalClass: "user-status",
       });
     },
   },
