@@ -363,4 +363,7 @@ export default Controller.extend(ModalFunctionality, {
     this._closeWithoutSaving = true;
     this.closeModal();
   },
+
+  @action
+  onTimeSelected() {},
 });
