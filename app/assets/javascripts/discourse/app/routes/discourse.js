@@ -94,7 +94,7 @@ const DiscourseRoute = Route.extend({
   isPoppedState(transition) {
     return (
       (!transition._discourse_intercepted && !!transition.intent.url) ||
-      (transition && transition.sequence > 1 && transition.urlMethod)
+      (transition.sequence > 1 && transition.urlMethod)
     );
   },
 });
