@@ -11,6 +11,8 @@ import { schedule } from "@ember/runloop";
 import { scrollTop } from "discourse/mixins/scroll-top";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
 import { logSearchLinkClick } from "discourse/lib/search";
+import RawHtml from "discourse/widgets/raw-html";
+import { emojiUnescape } from "discourse/lib/text";
 
 const _extraHeaderIcons = [];
 
@@ -67,6 +69,8 @@ createWidget("header-notifications", {
         )
       ),
     ];
+
+    contents.push(userStatus());
 
     if (user.isInDoNotDisturb()) {
       contents.push(h("div.do-not-disturb-background", iconNode("moon")));
@@ -320,6 +324,16 @@ createWidget("header-cloak", {
   click() {},
   scheduleRerender() {},
 });
+
+function userStatus() {
+  const statusEmoji = emojiUnescape(":mega:");
+  return h(
+    "div.user-status-background",
+    new RawHtml({
+      html: `<span>${statusEmoji}</span>`,
+    })
+  );
+}
 
 let additionalPanels = [];
 export function attachAdditionalPanel(name, toggle, transformAttrs) {
