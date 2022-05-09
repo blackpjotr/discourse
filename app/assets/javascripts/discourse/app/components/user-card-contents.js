@@ -51,11 +51,12 @@ export default Component.extend(CardContentsBase, CanCheckEmails, CleansUp, {
 
   @discourseComputed()
   userStatus() {
-    if (!this.siteSettings.enable_user_status) {
+    const status = this.user.customStatus;
+    if (!this.siteSettings.enable_user_status || !status) {
       return "";
     }
 
-    return emojiUnescape(":mega: off to dentist");
+    return emojiUnescape(`${status.emoji} ${status.description}`);
   },
 
   isSuspendedOrHasBio: or("user.suspend_reason", "user.bio_excerpt"),
