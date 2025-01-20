@@ -1,8 +1,8 @@
-import Service from "@ember/service";
-import { getOwner } from "@ember/application";
+import Service, { service } from "@ember/service";
 import { Promise } from "rsvp";
+import { getAbsoluteURL, getURLWithCDN } from "discourse/lib/get-url";
+import { disableImplicitInjections } from "discourse/lib/implicit-injections";
 import { fileToImageData } from "discourse/lib/media-optimization-utils";
-import { getAbsoluteURL, getURLWithCDN } from "discourse-common/lib/get-url";
 
 /**
  * This worker follows a particular promise/callback flow to ensure
@@ -20,12 +20,17 @@ import { getAbsoluteURL, getURLWithCDN } from "discourse-common/lib/get-url";
  * will wait for the "installed" message to be handled before continuing
  * with any image optimization work.
  */
+@disableImplicitInjections
 export default class MediaOptimizationWorkerService extends Service {
-  appEvents = getOwner(this).lookup("service:app-events");
+  @service appEvents;
+  @service siteSettings;
+
   worker = null;
   workerUrl = getAbsoluteURL("/javascripts/media-optimization-worker.js");
   currentComposerUploadData = null;
   promiseResolvers = null;
+  workerDoneCount = 0;
+  workerPendingCount = 0;
 
   async optimizeImage(data, opts = {}) {
     this.promiseResolvers = this.promiseResolvers || {};
@@ -34,7 +39,7 @@ export default class MediaOptimizationWorkerService extends Service {
       : true;
 
     let file = data;
-    if (!/(\.|\/)(jpe?g|png|webp)$/i.test(file.type)) {
+    if (!/(\.|\/)(jpe?g|png)$/i.test(file.type)) {
       return Promise.resolve();
     }
     if (
@@ -50,6 +55,7 @@ export default class MediaOptimizationWorkerService extends Service {
     }
     await this.ensureAvailableWorker();
 
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve) => {
       this.logIfDebug(`Transforming ${file.name}`);
 
@@ -94,6 +100,7 @@ export default class MediaOptimizationWorkerService extends Service {
         },
         [imageData.data.buffer]
       );
+      this.workerPendingCount++;
     });
   }
 
@@ -143,7 +150,9 @@ export default class MediaOptimizationWorkerService extends Service {
       this.workerInstalled = false;
       this.worker.terminate();
       this.worker = null;
+      this.workerDoneCount = 0;
     }
+    this.workerPendingCount = 0;
   }
 
   registerMessageHandler() {
@@ -159,6 +168,13 @@ export default class MediaOptimizationWorkerService extends Service {
 
           this.promiseResolvers[e.data.fileId](optimizedFile);
 
+          this.workerDoneCount++;
+          this.workerPendingCount--;
+          if (this.workerDoneCount > 4 && this.workerPendingCount === 0) {
+            this.logIfDebug("Terminating worker to release memory in WASM.");
+            this.stopWorker();
+          }
+
           break;
         case "error":
           this.logIfDebug(
@@ -170,6 +186,7 @@ export default class MediaOptimizationWorkerService extends Service {
           }
 
           this.promiseResolvers[e.data.fileId]();
+          this.workerPendingCount--;
           break;
         case "installed":
           this.logIfDebug("Worker installed.");

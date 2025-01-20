@@ -1,6 +1,7 @@
 import EmberObject from "@ember/object";
 import Evented from "@ember/object/evented";
-import { isTesting } from "discourse-common/config/environment";
+import $ from "jquery";
+import { isTesting } from "discourse/lib/environment";
 
 let _skipUpdate;
 let _rootElement;
@@ -18,7 +19,7 @@ export function configureEyeline(opts) {
 configureEyeline();
 
 // Track visible elements on the screen.
-export default EmberObject.extend(Evented, {
+export default class Eyeline extends EmberObject.extend(Evented) {
   update() {
     if (_skipUpdate) {
       return;
@@ -80,5 +81,5 @@ export default EmberObject.extend(Evented, {
         return this.trigger("sawBottom", { detail: $elem });
       }
     });
-  },
-});
+  }
+}

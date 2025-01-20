@@ -35,6 +35,15 @@
         "posted": {
           "type": "integer"
         },
+        "watching_category_or_tag": {
+          "type": "integer"
+        },
+        "new_features": {
+          "type": "integer"
+        },
+        "admin_problems": {
+          "type": "integer"
+        },
         "moved_post": {
           "type": "integer"
         },
@@ -63,6 +72,9 @@
           "type": "integer"
         },
         "liked_consolidated": {
+          "type": "integer"
+        },
+        "linked_consolidated": {
           "type": "integer"
         },
         "post_approved": {
@@ -107,10 +119,25 @@
         "chat_quoted": {
           "type": "integer"
         },
+        "chat_watched_thread": {
+          "type": "integer"
+        },
         "assigned": {
           "type": "integer"
         },
         "question_answer_user_commented": {
+          "type": "integer"
+        },
+        "following": {
+          "type": "integer"
+        },
+        "following_created_topic": {
+          "type": "integer"
+        },
+        "following_replied": {
+          "type": "integer"
+        },
+        "circles_activity": {
           "type": "integer"
         }
       },
@@ -124,6 +151,7 @@
         "invited_to_private_message",
         "invitee_accepted",
         "posted",
+        "watching_category_or_tag",
         "moved_post",
         "linked",
         "granted_badge",
@@ -134,6 +162,7 @@
         "watching_first_post",
         "topic_reminder",
         "liked_consolidated",
+        "linked_consolidated",
         "post_approved",
         "code_review_commit_approved",
         "membership_request_accepted",
@@ -199,6 +228,34 @@
         "member",
         "regular",
         "leader"
+      ]
+    },
+    "user_tips": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "first_notification": {
+          "type": "integer"
+        },
+        "topic_timeline": {
+          "type": "integer"
+        },
+        "post_menu": {
+          "type": "integer"
+        },
+        "topic_notification_levels": {
+          "type": "integer"
+        },
+        "suggested_topics": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "first_notification",
+        "topic_timeline",
+        "post_menu",
+        "topic_notification_levels",
+        "suggested_topics"
       ]
     },
     "groups": {
@@ -297,7 +354,22 @@
             "is_flag": {
               "type": "boolean"
             },
-            "is_custom_flag": {
+            "require_message": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "applies_to": {
+              "type": "array"
+            },
+            "is_used": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "integer"
+            },
+            "auto_action_type": {
               "type": "boolean"
             }
           },
@@ -308,7 +380,11 @@
             "description",
             "short_description",
             "is_flag",
-            "is_custom_flag"
+            "require_message",
+            "enabled",
+            "applies_to",
+            "is_used",
+            "auto_action_type"
           ]
         }
     },
@@ -337,7 +413,22 @@
             "is_flag": {
               "type": "boolean"
             },
-            "is_custom_flag": {
+            "require_message": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "applies_to": {
+              "type": "array"
+            },
+            "is_used": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "integer"
+            },
+            "auto_action_type": {
               "type": "boolean"
             }
           },
@@ -348,7 +439,11 @@
             "description",
             "short_description",
             "is_flag",
-            "is_custom_flag"
+            "require_message",
+            "enabled",
+            "applies_to",
+            "is_used",
+            "auto_action_type"
           ]
         }
     },
@@ -470,6 +565,12 @@
     "markdown_additional_options" : {
       "type": "object"
     },
+    "hashtag_configurations" : {
+      "type": "object"
+    },
+    "hashtag_icons" : {
+      "type": "object"
+    },
     "displayed_about_plugin_stat_groups" : {
       "type": "array"
     },
@@ -542,6 +643,12 @@
             },
             "has_children": {
               "type": "boolean"
+            },
+            "subcategory_count": {
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "sort_order": {
               "type": [
@@ -629,7 +736,19 @@
                 "null"
               ]
             },
+            "uploaded_logo_dark": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "uploaded_background": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "uploaded_background_dark": {
               "type": [
                 "string",
                 "null"
@@ -647,6 +766,10 @@
             },
             "parent_category_id": {
               "type": "integer"
+            },
+            "form_template_ids": {
+              "type": "array",
+              "items": {}
             }
           },
           "required": [
@@ -664,6 +787,7 @@
             "notification_level",
             "topic_template",
             "has_children",
+            "subcategory_count",
             "sort_order",
             "sort_ascending",
             "show_subcategory_list",
@@ -680,13 +804,12 @@
             "required_tag_groups",
             "read_only_banner",
             "uploaded_logo",
+            "uploaded_logo_dark",
             "uploaded_background",
+            "uploaded_background_dark",
             "can_edit"
           ]
         }
-    },
-    "show_welcome_topic_banner": {
-      "type": "boolean"
     },
     "archetypes": {
       "type": "array",
@@ -726,6 +849,24 @@
       "items": {
 
       }
+    },
+    "whispers_allowed_groups_names" : {
+      "type": "array"
+    },
+    "denied_emojis" : {
+      "type": "array"
+    },
+    "valid_flag_applies_to_types" : {
+      "type": "array"
+    },
+    "navigation_menu_site_top_tags": {
+      "type": "array"
+    },
+    "full_name_required_for_signup": {
+      "type": "boolean"
+    },
+    "full_name_visible_in_signup": {
+      "type": "boolean"
     }
   },
   "required": [
@@ -758,6 +899,8 @@
     "categories",
     "archetypes",
     "user_fields",
-    "auth_providers"
+    "auth_providers",
+    "full_name_required_for_signup",
+    "full_name_visible_in_signup"
   ]
 }

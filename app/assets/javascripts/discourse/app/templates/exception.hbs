@@ -7,19 +7,28 @@
       <div class="reason">{{this.reason}}</div>
       {{#if this.requestUrl}}
         <div class="url">
-          {{i18n "errors.prev_page"}} <a href={{this.requestUrl}} data-auto-route="true">{{this.requestUrl}}</a>
+          {{i18n "errors.prev_page"}}
+          <a
+            href={{this.requestUrl}}
+            data-auto-route="true"
+          >{{this.requestUrl}}</a>
         </div>
       {{/if}}
       <div class="desc">
         {{#if this.networkFixed}}
-          {{d-icon "check-circle"}}
+          {{d-icon "circle-check"}}
         {{/if}}
 
         {{this.desc}}
       </div>
       <div class="buttons">
         {{#each this.enabledButtons as |buttonData|}}
-          <DButton @icon={{buttonData.icon}} @action={{buttonData.action}} @label={{buttonData.key}} @class={{buttonData.classes}} />
+          <DButton
+            @icon={{buttonData.icon}}
+            @action={{buttonData.action}}
+            @label={{buttonData.key}}
+            class={{buttonData.classes}}
+          />
         {{/each}}
         <ConditionalLoadingSpinner @condition={{this.loading}} />
       </div>

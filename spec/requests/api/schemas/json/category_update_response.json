@@ -61,7 +61,7 @@
         },
         "permission": {
           "type": [
-            "string",
+            "integer",
             "null"
           ]
         },
@@ -77,9 +77,19 @@
             "null"
           ]
         },
+        "form_template_ids": {
+          "type": "array",
+          "items": {}
+        },
         "has_children": {
           "type": [
-            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        "subcategory_count": {
+          "type": [
+            "integer",
             "null"
           ]
         },
@@ -158,6 +168,12 @@
                 "min_count"
               ]
             }
+        },
+        "category_setting": {
+          "auto_bump_cooldown_days": 1,
+          "num_auto_bump_daily": null,
+          "require_reply_approval": null,
+          "require_topic_approval": null
         },
         "read_only_banner": {
           "type": [
@@ -242,7 +258,19 @@
             "null"
           ]
         },
+        "uploaded_logo_dark": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "uploaded_background": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uploaded_background_dark": {
           "type": [
             "string",
             "null"
@@ -267,7 +295,9 @@
         "notification_level",
         "can_edit",
         "topic_template",
+        "form_template_ids",
         "has_children",
+        "subcategory_count",
         "sort_order",
         "sort_ascending",
         "show_subcategory_list",
@@ -296,7 +326,9 @@
         "topic_featured_link_allowed",
         "search_priority",
         "uploaded_logo",
-        "uploaded_background"
+        "uploaded_logo_dark",
+        "uploaded_background",
+        "uploaded_background_dark"
       ]
     }
   },

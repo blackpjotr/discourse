@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
 RSpec.describe ReviewableUser, type: :model do
-  fab!(:moderator) { Fabricate(:moderator) }
+  fab!(:moderator)
   let(:user) do
     user = Fabricate(:user)
     user.activate
     user
   end
-  fab!(:admin) { Fabricate(:admin) }
+  fab!(:admin)
 
   describe "#actions_for" do
-    fab!(:reviewable) { Fabricate(:reviewable) }
+    fab!(:reviewable)
 
     it "returns correct actions in the pending state" do
       actions = reviewable.actions_for(Guardian.new(moderator))
@@ -26,38 +26,38 @@ RSpec.describe ReviewableUser, type: :model do
       expect(actions.has?(:delete_user_block)).to eq(false)
     end
 
-    it 'can delete a user without a giving a rejection reason if the user was a spammer' do
-      reviewable.reviewable_scores.build(user: admin, reason: 'suspect_user')
+    it "doesn't ask for a rejection reason when deleting a user who was flagged as a possible spammer" do
+      reviewable.reviewable_scores.build(user: admin, reason: "suspect_user")
 
       assert_require_reject_reason(:delete_user, false)
     end
 
-    it 'requires a rejection reason to delete a user' do
+    it "requires a rejection reason to delete a user" do
       assert_require_reject_reason(:delete_user, true)
     end
 
-    it 'can delete and block a user without giving a rejection reason if the user was a spammer' do
-      reviewable.reviewable_scores.build(user: admin, reason: 'suspect_user')
+    it "doesn't ask for a rejection reason when blocking a user who was flagged as a possible spammer" do
+      reviewable.reviewable_scores.build(user: admin, reason: "suspect_user")
 
-      assert_require_reject_reason(:delete_user, false)
+      assert_require_reject_reason(:delete_user_block, false)
     end
 
-    it 'requires a rejection reason to delete and block a user' do
+    it "requires a rejection reason to delete and block a user" do
       assert_require_reject_reason(:delete_user_block, true)
     end
 
     def assert_require_reject_reason(id, expected)
       actions = reviewable.actions_for(Guardian.new(moderator))
 
-      expect(actions.to_a.
-        find { |a| a.id == id }.require_reject_reason).
-        to eq(expected)
+      expect(actions.to_a.find { |a| a.server_action.to_sym == id }.require_reject_reason).to eq(
+        expected,
+      )
     end
   end
 
   describe "#update_fields" do
-    fab!(:moderator) { Fabricate(:moderator) }
-    fab!(:reviewable) { Fabricate(:reviewable) }
+    fab!(:moderator)
+    fab!(:reviewable)
 
     it "doesn't raise errors with an empty update" do
       expect(reviewable.update_fields(nil, moderator)).to eq(true)
@@ -78,7 +78,7 @@ RSpec.describe ReviewableUser, type: :model do
   end
 
   describe "#perform" do
-    fab!(:reviewable) { Fabricate(:reviewable) }
+    fab!(:reviewable)
 
     context "when approving" do
       it "allows us to approve a user" do
@@ -106,9 +106,7 @@ RSpec.describe ReviewableUser, type: :model do
         reviewable.reload
         expect(reviewable.target).to be_blank
         expect(reviewable.reject_reason).to eq("reject reason")
-        expect(UserHistory.last.context).to eq(
-          I18n.t("user.destroy_reasons.reviewable_reject")
-        )
+        expect(UserHistory.last.context).to eq(I18n.t("user.destroy_reasons.reviewable_reject"))
       end
 
       it "allows us to reject and block a user" do
@@ -138,8 +136,23 @@ RSpec.describe ReviewableUser, type: :model do
 
       it "optionally sends email with reject reason" do
         SiteSetting.must_approve_users = true
-        Jobs::CriticalUserEmail.any_instance.expects(:execute).with(type: :signup_after_reject, user_id: reviewable.target_id, reject_reason: "reject reason").once
-        reviewable.perform(moderator, :delete_user_block, reject_reason: "reject reason", send_email: true)
+        Jobs::CriticalUserEmail
+          .any_instance
+          .expects(:execute)
+          .with(
+            {
+              type: :signup_after_reject,
+              user_id: reviewable.target_id,
+              reject_reason: "reject reason",
+            },
+          )
+          .once
+        reviewable.perform(
+          moderator,
+          :delete_user_block,
+          reject_reason: "reject reason",
+          send_email: true,
+        )
       end
 
       it "allows us to reject a user who has posts" do
@@ -188,7 +201,7 @@ RSpec.describe ReviewableUser, type: :model do
     end
   end
 
-  describe 'when must_approve_users is true' do
+  describe "when must_approve_users is true" do
     before do
       SiteSetting.must_approve_users = true
       Jobs.run_immediately!
@@ -210,27 +223,21 @@ RSpec.describe ReviewableUser, type: :model do
       it "doesn't enqueue a 'signup after approval' email if must_approve_users is false" do
         SiteSetting.must_approve_users = false
 
-        expect_not_enqueued_with(job: :critical_user_email, args: { type: :signup_after_approval }) do
-          @reviewable.perform(admin, :approve_user)
-        end
+        expect_not_enqueued_with(
+          job: :critical_user_email,
+          args: {
+            type: :signup_after_approval,
+          },
+        ) { @reviewable.perform(admin, :approve_user) }
       end
     end
 
-    it 'triggers a extensibility event' do
+    it "triggers a extensibility event" do
       user && admin # bypass the user_created event
-      event = DiscourseEvent.track_events {
-        ReviewableUser.find_by(target: user).perform(admin, :approve_user)
-      }.first
-
-      expect(event[:event_name]).to eq(:user_approved)
-      expect(event[:params].first).to eq(user)
-    end
-
-    it 'triggers a extensibility event' do
-      user && admin # bypass the user_created event
-      event = DiscourseEvent.track_events {
-        ReviewableUser.find_by(target: user).perform(admin, :approve_user)
-      }.first
+      event =
+        DiscourseEvent
+          .track_events { ReviewableUser.find_by(target: user).perform(admin, :approve_user) }
+          .first
 
       expect(event[:event_name]).to eq(:user_approved)
       expect(event[:params].first).to eq(user)

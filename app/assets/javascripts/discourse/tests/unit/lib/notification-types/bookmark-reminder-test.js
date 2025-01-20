@@ -1,11 +1,11 @@
-import { discourseModule } from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
-import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
-import { deepMerge } from "discourse-common/lib/object";
-import { createRenderDirector } from "discourse/tests/helpers/notification-types-helper";
 import { htmlSafe } from "@ember/template";
+import { setupTest } from "ember-qunit";
+import { module, test } from "qunit";
+import { deepMerge } from "discourse/lib/object";
 import Notification from "discourse/models/notification";
-import I18n from "I18n";
+import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
+import { createRenderDirector } from "discourse/tests/helpers/notification-types-helper";
+import { i18n } from "discourse-i18n";
 
 function getNotification(overrides = {}) {
   return Notification.create(
@@ -33,7 +33,9 @@ function getNotification(overrides = {}) {
   );
 }
 
-discourseModule("Unit | Notification Types | bookmark-reminder", function () {
+module("Unit | Notification Types | bookmark-reminder", function (hooks) {
+  setupTest(hooks);
+
   test("linkTitle", function (assert) {
     const notification = getNotification({
       data: { bookmark_name: "My awesome bookmark" },
@@ -45,7 +47,7 @@ discourseModule("Unit | Notification Types | bookmark-reminder", function () {
     );
     assert.strictEqual(
       director.linkTitle,
-      I18n.t("notifications.titles.bookmark_reminder_with_name", {
+      i18n("notifications.titles.bookmark_reminder_with_name", {
         name: "My awesome bookmark",
       }),
       "content includes the bookmark name when the bookmark has a name"

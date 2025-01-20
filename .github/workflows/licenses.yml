@@ -15,13 +15,14 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'pull_request' || github.repository != 'discourse/discourse-private-mirror'
     name: run
     runs-on: ubuntu-latest
     container: discourse/discourse_test:slim
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
@@ -31,12 +32,11 @@ jobs:
           git config --global user.name "Discourse CI"
 
       - name: Bundler cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-gem-
+          restore-keys: ${{ runner.os }}-gem-
 
       - name: Setup gems
         run: |
@@ -48,42 +48,18 @@ jobs:
 
       - name: Setup licensed
         run: |
-          # gem install licensed
-          # Workaround for https://github.com/github/licensed/issues/521
-          gem install specific_install
-          gem specific_install https://github.com/CvX/licensed.git -b bundler-compat
-
-      - name: Get yarn cache directory
-        id: yarn-cache-dir
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - name: Yarn cache
-        uses: actions/cache@v3
-        id: yarn-cache
-        with:
-          path: ${{ steps.yarn-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+          gem install licensed
 
       - name: Check RubyGems Licenses
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         run: |
           licensed cache
           licensed status
 
-      - name: Yarn install
-        run: yarn install
+      - name: pnpm install
+        run: pnpm install
 
-      - name: Check Yarn Licenses
-        if: ${{ always() }}
+      - name: Check JS Licenses
+        if: ${{ !cancelled() }}
         run: |
-          yarn global add licensee
-          yarn global upgrade licensee
-          licensee --errors-only
-
-      - name: Check Ember CLI Workspace Licenses
-        if: ${{ always() }}
-        working-directory: ./app/assets/javascripts
-        run: |
-          licensee --errors-only
+          pnpm licensee --errors-only

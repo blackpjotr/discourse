@@ -25,18 +25,22 @@
 
   margin: 0 0 10px;
   .topic-list-data {
-    padding: 12px 5px;
+    padding: 0.8em 0.33em;
     &:first-of-type {
-      padding-left: 10px;
+      padding-left: 0.67em;
     }
     &:last-of-type {
-      padding-right: 10px;
+      padding-right: 0.67em;
+    }
+    th & {
+      border-bottom: 3px solid var(--primary-low);
     }
   }
 
   button.bulk-select {
     padding: 0;
-    line-height: $line-height-large;
+    margin-right: 0.5em;
+    line-height: var(--line-height-large);
   }
 
   .topic-list-data.bulk-select {
@@ -44,7 +48,7 @@
     width: 30px;
     label {
       margin: 0px;
-      padding: 12px 10px 16px 10px;
+      padding: 0.8em 0.67em 1.1em 0.67em;
       cursor: pointer;
     }
     + .main-link {
@@ -52,13 +56,15 @@
     }
   }
 
-  .badge-notification {
+  .topics-replies-toggle {
+    background: none;
+    border: none;
+    line-height: var(--line-height-large);
+    padding-left: 0.5em;
+    padding-right: 0.5em;
     position: relative;
-    top: -2px;
-
-    &.new-topic {
-      top: -1px;
-      padding-left: 2px;
+    &.active {
+      @include nav-active();
     }
   }
 
@@ -80,7 +86,7 @@
         cursor: default;
         color: var(--primary-med-or-secondary-med);
         line-height: $td-posters-more-lh;
-        font-size: $font-down-1;
+        font-size: var(--font-down-1);
       }
     }
   }
@@ -89,20 +95,19 @@
   }
   .posters a:first-child .avatar.latest:not(.single) {
     box-shadow: 0 0 3px 1px rgba(var(--tertiary-rgb), 0.35);
-    border: 2px solid rgba(var(--tertiary-rgb), 0.5);
+    border: 1px solid rgba(var(--tertiary-rgb), 0.5);
     position: relative;
-    top: -2px;
     left: -2px;
   }
 
   .likes {
-    width: 65px;
+    width: 4.3em;
   }
   .views {
-    width: 65px;
+    width: 4.3em;
   }
   .posts {
-    width: 65px;
+    width: 4.3em;
   }
 
   .post-actions {
@@ -110,7 +115,7 @@
     width: auto;
     color: var(--primary-med-or-secondary-med);
     text-align: left;
-    font-size: $font-down-1;
+    font-size: var(--font-down-1);
     margin-top: 5px;
     .fa {
       margin-right: 2px;
@@ -118,17 +123,17 @@
     a {
       color: var(--primary-med-or-secondary-med);
       margin-right: 3px;
-      line-height: $line-height-large;
+      line-height: var(--line-height-large);
     }
   }
   .activity {
-    width: 60px;
+    width: 4em;
     &:lang(zh_CN) {
-      width: 80px;
+      width: 5.3em;
     }
   }
   .age {
-    width: 60px;
+    width: 4em;
   }
   .with-year {
     white-space: nowrap;
@@ -136,7 +141,16 @@
 }
 
 .topic-list-bottom {
-  margin: 20px 0;
+  margin: 1.25em 0;
+  .dismiss-container-bottom {
+    float: right;
+  }
+  .--no-topics-education + & {
+    margin: 0;
+    .footer-message {
+      padding-top: 4em;
+    }
+  }
 }
 
 // Misc. stuff
@@ -157,10 +171,23 @@
   h2 {
     margin: 20px 0 10px;
   }
-  .show-more.has-topics {
+
+  .show-more {
+    width: 100%;
+    z-index: z("base");
+    position: absolute;
     top: 0;
+
     .alert {
-      padding: 16px 35px 16px 14px;
+      margin: 0;
+      padding: 1.1em 2em 1.1em 0.65em;
+      gap: 0.65em;
+      align-items: center;
+
+      &.loading {
+        color: var(--primary-medium);
+        cursor: default;
+      }
     }
   }
 }
@@ -203,10 +230,10 @@
     }
     // reduce width for more title space
     .posts {
-      width: 50px;
+      width: 3em;
     }
     .posters {
-      width: 30px;
+      width: 2em;
       text-align: center;
     }
     // show only the first poster
@@ -229,42 +256,24 @@
 }
 
 @include breakpoint(medium) {
-  // slightly smaller font, tighten spacing on nav pills
   .nav-pills {
     > li > a {
-      font-size: $font-0;
-      padding: 7px 10px;
+      font-size: var(--font-0);
+      padding: 0.45em 0.67em;
     }
   }
 
   .topic-list {
-    // tighter table header spacing
-    .topic-list-item .topic-list-data:first-of-type {
-      padding: 12px 5px;
-    }
-    // smaller table cell spacing
     .topic-list-data {
-      padding: 10px;
-      font-size: $font-0;
+      font-size: var(--font-0);
     }
+  }
+
+  .topic-list-header {
+    font-size: var(--font-down-1);
   }
 }
 
-.welcome-topic-banner {
-  border: 1px solid var(--primary-low);
-  box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.12);
-  padding: 10px;
-  display: flex;
-  flex-direction: row;
-
-  .col-text {
-    width: 70%;
-  }
-  .col-button {
-    width: 30%;
-    display: flex;
-    align-self: center;
-    justify-content: flex-end;
-    padding-right: 30px;
-  }
+.container.list-container {
+  position: relative;
 }

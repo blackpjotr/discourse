@@ -1,20 +1,24 @@
-import { module, test } from "qunit";
+import { setupTest } from "ember-qunit";
 import AllowLister from "pretty-text/allow-lister";
+import { module, test } from "qunit";
 
-module("Unit | Utility | allowLister", function () {
+module("Unit | Utility | allowLister", function (hooks) {
+  setupTest(hooks);
+
   test("allowLister", function (assert) {
     const allowLister = new AllowLister();
 
-    assert.ok(
+    assert.true(
       Object.keys(allowLister.getAllowList().tagList).length > 1,
-      "should have some defaults"
+      "has some defaults"
     );
 
     allowLister.disable("default");
 
-    assert.ok(
-      Object.keys(allowLister.getAllowList().tagList).length === 0,
-      "should have no defaults if disabled"
+    assert.strictEqual(
+      Object.keys(allowLister.getAllowList().tagList).length,
+      0,
+      "has no defaults if disabled"
     );
 
     allowLister.allowListFeature("test", [

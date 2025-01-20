@@ -1,10 +1,14 @@
-import LinkLookup from "discourse/lib/link-lookup";
+import { getOwner } from "@ember/owner";
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
-import Post from "discourse/models/post";
+import LinkLookup from "discourse/lib/link-lookup";
 
 module("Unit | Utility | link-lookup", function (hooks) {
+  setupTest(hooks);
+
   hooks.beforeEach(function () {
-    this.post = Post.create();
+    const store = getOwner(this).lookup("service:store");
+    this.post = store.createRecord("post");
     this.linkLookup = new LinkLookup({
       "en.wikipedia.org/wiki/handheld_game_console": {
         post_number: 1,
@@ -13,7 +17,7 @@ module("Unit | Utility | link-lookup", function (hooks) {
   });
 
   test("works with https", function (assert) {
-    assert.ok(
+    assert.true(
       this.linkLookup.check(
         this.post,
         "https://en.wikipedia.org/wiki/handheld_game_console"
@@ -22,7 +26,7 @@ module("Unit | Utility | link-lookup", function (hooks) {
   });
 
   test("works with http", function (assert) {
-    assert.ok(
+    assert.true(
       this.linkLookup.check(
         this.post,
         "http://en.wikipedia.org/wiki/handheld_game_console"
@@ -31,7 +35,7 @@ module("Unit | Utility | link-lookup", function (hooks) {
   });
 
   test("works with trailing slash", function (assert) {
-    assert.ok(
+    assert.true(
       this.linkLookup.check(
         this.post,
         "https://en.wikipedia.org/wiki/handheld_game_console/"
@@ -40,7 +44,7 @@ module("Unit | Utility | link-lookup", function (hooks) {
   });
 
   test("works with uppercase characters", function (assert) {
-    assert.ok(
+    assert.true(
       this.linkLookup.check(
         this.post,
         "https://en.wikipedia.org/wiki/Handheld_game_console"

@@ -6,12 +6,16 @@ RSpec.describe AnonymousShadowCreator do
   end
 
   context "when anonymous posting is enabled" do
-    fab!(:user) { Fabricate(:user, trust_level: 3) }
+    fab!(:user) { Fabricate(:user, trust_level: TrustLevel[3]) }
 
-    before { SiteSetting.allow_anonymous_posting = true }
+    before do
+      SiteSetting.allow_anonymous_posting = true
+      SiteSetting.anonymous_posting_allowed_groups = "11"
+    end
 
-    it "returns no shadow if trust level is not met" do
-      expect(AnonymousShadowCreator.get(Fabricate.build(:user, trust_level: 0))).to eq(nil)
+    it "returns no shadow if the user is not in a group that is allowed to anonymously post" do
+      user = Fabricate(:user, trust_level: TrustLevel[0])
+      expect(AnonymousShadowCreator.get(user)).to eq(nil)
     end
 
     it "returns no shadow if must_approve_users is true and user is not approved" do
@@ -28,6 +32,7 @@ RSpec.describe AnonymousShadowCreator do
       shadow2 = AnonymousShadowCreator.get(user)
 
       expect(shadow.id).to eq(shadow2.id)
+      shadow.send(:trigger_user_automatic_group_refresh)
       create_post(user: shadow)
 
       user.reload
@@ -40,7 +45,6 @@ RSpec.describe AnonymousShadowCreator do
       expect(shadow3.user_option.email_messages_level).to eq(UserOption.email_level_types[:never])
 
       expect(shadow2.id).not_to eq(shadow3.id)
-
     end
 
     it "returns a shadow for a legit user" do
@@ -64,7 +68,7 @@ RSpec.describe AnonymousShadowCreator do
     end
 
     it "works even when names are required" do
-      SiteSetting.full_name_required = true
+      SiteSetting.full_name_requirement = "required_at_signup"
 
       expect { AnonymousShadowCreator.get(user) }.to_not raise_error
     end

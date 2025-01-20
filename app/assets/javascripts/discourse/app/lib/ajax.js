@@ -1,13 +1,15 @@
+import { run } from "@ember/runloop";
+import $ from "jquery";
 import { Promise } from "rsvp";
+import { isTesting } from "discourse/lib/environment";
+import getURL from "discourse/lib/get-url";
+import userPresent from "discourse/lib/user-presence";
 import Session from "discourse/models/session";
 import Site from "discourse/models/site";
 import User from "discourse/models/user";
-import getURL from "discourse-common/lib/get-url";
-import { isTesting } from "discourse-common/config/environment";
-import { run } from "@ember/runloop";
-import userPresent from "discourse/lib/user-presence";
 
 let _trackView = false;
+let _topicId = null;
 let _transientHeader = null;
 let _logoffCallback;
 
@@ -15,8 +17,16 @@ export function setTransientHeader(key, value) {
   _transientHeader = { key, value };
 }
 
-export function viewTrackingRequired() {
+export function trackNextAjaxAsTopicView(topicId) {
+  _topicId = topicId;
+}
+
+export function trackNextAjaxAsPageview() {
   _trackView = true;
+}
+
+export function resetAjax() {
+  _trackView = false;
 }
 
 export function setLogoffCallback(cb) {
@@ -65,6 +75,8 @@ export function ajax() {
     args = arguments[1];
   }
 
+  url = getURL(url);
+
   let ignoreUnsent = true;
   if (args.ignoreUnsent !== undefined) {
     ignoreUnsent = args.ignoreUnsent;
@@ -85,8 +97,12 @@ export function ajax() {
 
     if (_trackView && (!args.type || args.type === "GET")) {
       _trackView = false;
-      // DON'T CHANGE: rack is prepending "HTTP_" in the header's name
       args.headers["Discourse-Track-View"] = "true";
+
+      if (_topicId) {
+        args.headers["Discourse-Track-View-Topic-Id"] = _topicId;
+      }
+      _topicId = null;
     }
 
     if (userPresent()) {
@@ -163,7 +179,7 @@ export function ajax() {
       args.headers["Discourse-Script"] = true;
     }
 
-    ajaxObj = $.ajax(getURL(url), args);
+    ajaxObj = $.ajax(url, args);
   }
 
   let promise;

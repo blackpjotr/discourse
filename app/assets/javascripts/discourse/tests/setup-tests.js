@@ -1,3 +1,34 @@
+/* eslint-disable simple-import-sort/imports */
+import Application from "../app";
+import "./loader-shims";
+/* eslint-enable simple-import-sort/imports */
+
+import { getOwner } from "@ember/owner";
+import {
+  getSettledState,
+  isSettled,
+  setApplication,
+  setResolver,
+} from "@ember/test-helpers";
+import $ from "jquery";
+import MessageBus from "message-bus-client";
+import QUnit from "qunit";
+import sinon from "sinon";
+import PreloadStore from "discourse/lib/preload-store";
+import { resetSettings as resetThemeSettings } from "discourse/lib/theme-settings-store";
+import { ScrollingDOMMethods } from "discourse/mixins/scrolling";
+import Session from "discourse/models/session";
+import User from "discourse/models/user";
+import { resetCategoryCache } from "discourse/models/category";
+import SiteSettingService from "discourse/services/site-settings";
+import { flushMap } from "discourse/services/store";
+import pretender, {
+  applyDefaultHandlers,
+  pretenderHelpers,
+  resetPretender,
+} from "discourse/tests/helpers/create-pretender";
+import { setupDeprecationCounter } from "discourse/tests/helpers/deprecation-counter";
+import { clearState as clearPresenceState } from "discourse/tests/helpers/presence-pretender";
 import {
   applyPretender,
   exists,
@@ -6,67 +37,18 @@ import {
   testsInitialized,
   testsTornDown,
 } from "discourse/tests/helpers/qunit-helpers";
-import pretender, {
-  applyDefaultHandlers,
-  pretenderHelpers,
-  resetPretender,
-} from "discourse/tests/helpers/create-pretender";
+import { configureRaiseOnDeprecation } from "discourse/tests/helpers/raise-on-deprecation";
 import { resetSettings } from "discourse/tests/helpers/site-settings";
-import { getOwner, setDefaultOwner } from "discourse-common/lib/get-owner";
-import {
-  getSettledState,
-  isSettled,
-  setApplication,
-  setResolver,
-} from "@ember/test-helpers";
-import { setupS3CDN, setupURL } from "discourse-common/lib/get-url";
-import Application from "../app";
-import MessageBus from "message-bus-client";
-import PreloadStore from "discourse/lib/preload-store";
-import { resetSettings as resetThemeSettings } from "discourse/lib/theme-settings-store";
-import QUnit from "qunit";
-import { ScrollingDOMMethods } from "discourse/mixins/scrolling";
-import Session from "discourse/models/session";
-import User from "discourse/models/user";
-import Site from "discourse/models/site";
-import bootbox from "bootbox";
-import { buildResolver } from "discourse-common/resolver";
-import { createHelperContext } from "discourse-common/lib/helpers";
-import deprecated from "discourse-common/lib/deprecated";
-import { flushMap } from "discourse/services/store";
-import sinon from "sinon";
 import { disableCloaking } from "discourse/widgets/post-stream";
-import { clearState as clearPresenceState } from "discourse/tests/helpers/presence-pretender";
-import { addModuleExcludeMatcher } from "ember-cli-test-loader/test-support/index";
-import SiteSettingService from "discourse/services/site-settings";
+import deprecated from "discourse/lib/deprecated";
+import { setDefaultOwner } from "discourse/lib/get-owner";
+import { setupS3CDN, setupURL } from "discourse/lib/get-url";
+import { buildResolver } from "discourse/resolver";
+import { loadSprites } from "../lib/svg-sprite-loader";
+import * as FakerModule from "@faker-js/faker";
+import { setLoadedFaker } from "discourse/lib/load-faker";
 
-const Plugin = $.fn.modal;
-const Modal = Plugin.Constructor;
-
-function AcceptanceModal(option, _relatedTarget) {
-  return this.each(function () {
-    let $this = $(this);
-    let data = $this.data("bs.modal");
-    let options = Object.assign(
-      {},
-      Modal.DEFAULTS,
-      $this.data(),
-      typeof option === "object" && option
-    );
-
-    if (!data) {
-      $this.data("bs.modal", (data = new Modal(this, options)));
-    }
-    data.$body = $("#ember-testing");
-
-    if (typeof option === "string") {
-      data[option](_relatedTarget);
-    } else if (options.show) {
-      data.show(_relatedTarget);
-    }
-  });
-}
-
+let cancelled = false;
 let started = false;
 
 function createApplication(config, settings) {
@@ -124,31 +106,52 @@ function setupToolbar() {
     )
   );
 
-  QUnit.config.urlConfig.push({
-    id: "qunit_skip_core",
-    label: "Skip Core",
-    value: "1",
-  });
-
-  QUnit.config.urlConfig.push({
-    id: "qunit_skip_plugins",
-    label: "Skip Plugins",
-    value: "1",
-  });
-
   const pluginNames = new Set();
 
-  Object.keys(requirejs.entries).forEach((moduleName) => {
-    const found = moduleName.match(/\/plugins\/([\w-]+)\//);
-    if (found && moduleName.match(/\-test/)) {
-      pluginNames.add(found[1]);
-    }
+  document
+    .querySelector("#dynamic-test-js")
+    ?.content.querySelectorAll("script[data-discourse-plugin]")
+    .forEach((script) => pluginNames.add(script.dataset.discoursePlugin));
+
+  QUnit.config.urlConfig.push({
+    id: "loop",
+    label: "Loop until failure",
+    value: "1",
   });
 
   QUnit.config.urlConfig.push({
-    id: "qunit_single_plugin",
-    label: "Plugin",
-    value: Array.from(pluginNames),
+    id: "target",
+    label: "Target",
+    value: [
+      "core",
+      "plugins",
+      "all",
+      "theme-qunit",
+      "-----",
+      ...Array.from(pluginNames),
+    ],
+  });
+
+  QUnit.begin(() => {
+    const select = document.querySelector(
+      `#qunit-testrunner-toolbar [name=target]`
+    );
+
+    const testingThemeId = parseInt(
+      document.querySelector("script[data-theme-id]")?.dataset.themeId,
+      10
+    );
+    if (testingThemeId) {
+      select.innerHTML = `<option selected>theme id ${testingThemeId}</option>`;
+      select.disabled = true;
+      return;
+    }
+
+    select.value ||= "core";
+    select.querySelector("option:not([value])").remove();
+    select.querySelector("option[value=-----]").disabled = true;
+    select.querySelector("option[value=all]").innerText =
+      "all (not recommended)";
   });
 
   // Abort tests when the qunit controls are clicked
@@ -164,6 +167,7 @@ function setupToolbar() {
     }
 
     if (["INPUT", "SELECT", "LABEL"].includes(target.tagName)) {
+      cancelled = true;
       document.querySelector("#qunit-abort-tests-button")?.click();
     }
   });
@@ -198,7 +202,10 @@ function writeSummaryLine(message) {
 export default function setupTests(config) {
   disableCloaking();
 
+  setupDeprecationCounter(QUnit);
+
   QUnit.config.hidepassed = true;
+  QUnit.config.testTimeout = 60_000;
 
   sinon.config = {
     injectIntoThis: false,
@@ -218,8 +225,6 @@ export default function setupTests(config) {
     window.Logster = { enabled: false };
   }
 
-  $.fn.modal = AcceptanceModal;
-
   Object.defineProperty(window, "exists", {
     get() {
       deprecated(
@@ -227,6 +232,7 @@ export default function setupTests(config) {
         {
           since: "2.6.0.beta.4",
           dropFrom: "2.6.0",
+          id: "discourse.qunit.global-exists",
         }
       );
       return exists;
@@ -242,7 +248,6 @@ export default function setupTests(config) {
 
   let app;
   QUnit.testStart(function (ctx) {
-    bootbox.$body = $("#ember-testing");
     let settings = resetSettings();
     resetThemeSettings();
 
@@ -293,28 +298,13 @@ export default function setupTests(config) {
     applyPretender(ctx.module, pretender, pretenderHelpers());
 
     Session.resetCurrent();
-    if (setupData) {
-      const session = Session.current();
-      session.markdownItURL = setupData.markdownItUrl;
-      session.highlightJsPath = setupData.highlightJsPath;
-    }
     User.resetCurrent();
 
-    createHelperContext({
-      get siteSettings() {
-        return app.__container__.lookup("service:site-settings");
-      },
-      capabilities: {},
-      get site() {
-        return app.__container__.lookup("service:site") || Site.current();
-      },
-      registry: app.__registry__,
-    });
-
     PreloadStore.reset();
-    resetSite(settings);
+    resetSite();
 
-    sinon.stub(ScrollingDOMMethods, "screenNotFull");
+    resetCategoryCache();
+
     sinon.stub(ScrollingDOMMethods, "bindOnScroll");
     sinon.stub(ScrollingDOMMethods, "unbindOnScroll");
   });
@@ -326,10 +316,6 @@ export default function setupTests(config) {
     resetPretender();
     clearPresenceState();
 
-    // Clean up the DOM. Some tests might leave extra classes or elements behind.
-    Array.from(document.getElementsByClassName("modal-backdrop")).forEach((e) =>
-      e.remove()
-    );
     document.body.removeAttribute("class");
     let html = document.documentElement;
     html.removeAttribute("class");
@@ -352,49 +338,44 @@ export default function setupTests(config) {
     QUnit.config.autostart = false;
   }
 
-  let skipCore =
-    getUrlParameter("qunit_single_plugin") ||
-    getUrlParameter("qunit_skip_core") === "1";
-
-  let singlePlugin = getUrlParameter("qunit_single_plugin");
-  let skipPlugins = !singlePlugin && getUrlParameter("qunit_skip_plugins");
-
-  if (skipCore && !getUrlParameter("qunit_skip_core")) {
-    replaceUrlParameter("qunit_skip_core", "1");
+  if (getUrlParameter("loop")) {
+    QUnit.done(({ failed }) => {
+      if (failed === 0 && !cancelled) {
+        window.location.reload();
+      }
+    });
   }
 
-  if (!skipPlugins && getUrlParameter("qunit_skip_plugins")) {
-    replaceUrlParameter("qunit_skip_plugins", null);
+  handleLegacyParameters();
+
+  const target = getUrlParameter("target") || "core";
+  if (target === "theme-qunit") {
+    window.location.href = window.location.origin + "/theme-qunit";
   }
 
-  const shouldLoadModule = (name) => {
-    if (!/\-test/.test(name)) {
-      return false;
-    }
-
-    const isPlugin = name.match(/\/plugins\//);
-    const isCore = !isPlugin;
-    const pluginName = name.match(/\/plugins\/([\w-]+)\//)?.[1];
-
-    if (skipCore && isCore) {
-      return false;
-    } else if (skipPlugins && isPlugin) {
-      return false;
-    } else if (singlePlugin && singlePlugin !== pluginName) {
-      return false;
-    }
-    return true;
-  };
-
-  addModuleExcludeMatcher((name) => !shouldLoadModule(name));
+  const hasPluginJs = !!document.querySelector("script[data-discourse-plugin]");
+  const hasThemeJs = !!document.querySelector("script[data-theme-id]");
 
   // forces 0 as duration for all jquery animations
-  // eslint-disable-next-line no-undef
-  jQuery.fx.off = true;
+  $.fx.off = true;
 
   setupToolbar();
   reportMemoryUsageAfterTests();
   patchFailedAssertion();
+  if (!window.Testem) {
+    // Running in a dev server - svg sprites are available
+    // Using a fake 40-char version hash will redirect to the current one
+    loadSprites(
+      "/svg-sprite/localhost/svg--aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.js",
+      "fontawesome"
+    );
+  }
+
+  setLoadedFaker(FakerModule);
+
+  if (!hasPluginJs && !hasThemeJs) {
+    configureRaiseOnDeprecation();
+  }
 }
 
 function getUrlParameter(name) {
@@ -402,40 +383,43 @@ function getUrlParameter(name) {
   return queryParams.get(name);
 }
 
-function replaceUrlParameter(name, value) {
-  const queryParams = new URLSearchParams(window.location.search);
-  if (value === null) {
-    queryParams.delete(name);
-  } else {
-    queryParams.set(name, value);
-  }
-  history.replaceState(null, null, "?" + queryParams.toString());
-
-  QUnit.begin(() => {
-    QUnit.config[name] = value;
-    const formElement = document.querySelector(
-      `#qunit-testrunner-toolbar [name=${name}]`
-    );
-    if (formElement?.type === "checkbox") {
-      formElement.checked = !!value;
-    } else if (formElement) {
-      formElement.value = value;
-    }
-  });
-}
-
 function patchFailedAssertion() {
   const oldPushResult = QUnit.assert.pushResult;
 
   QUnit.assert.pushResult = function (resultInfo) {
     if (!resultInfo.result && !isSettled()) {
+      const settledState = getSettledState();
+      let stateString = Object.entries(settledState)
+        .filter(([, value]) => value === true)
+        .map(([key]) => key)
+        .join(", ");
+
+      if (settledState.pendingRequestCount > 0) {
+        stateString += `, pending requests: ${settledState.pendingRequestCount}`;
+      }
+
       // eslint-disable-next-line no-console
       console.warn(
-        "ℹ️ Hint: when the assertion failed, the Ember runloop was not in a settled state. Maybe you missed an `await` further up the test? Or maybe you need to manually add `await settled()` before your assertion?",
-        getSettledState()
+        `ℹ️ Hint: when the assertion failed, the Ember runloop was not in a settled state. Maybe you missed an \`await\` further up the test? Or maybe you need to manually add \`await settled()\` before your assertion? (${stateString})`
       );
     }
 
     oldPushResult.call(this, resultInfo);
   };
+}
+
+function handleLegacyParameters() {
+  for (const param of [
+    "qunit_single_plugin",
+    "qunit_skip_core",
+    "qunit_skip_plugins",
+  ]) {
+    if (getUrlParameter(param)) {
+      QUnit.begin(() => {
+        throw new Error(
+          `${param} is no longer supported. Use the 'target' parameter instead`
+        );
+      });
+    }
+  }
 }

@@ -1,7 +1,7 @@
-import { acceptance, exists, queryAll } from "../helpers/qunit-helpers";
-import { test } from "qunit";
 import { click, visit } from "@ember/test-helpers";
+import { test } from "qunit";
 import userFixtures from "../fixtures/user-fixtures";
+import { acceptance, queryAll } from "../helpers/qunit-helpers";
 
 acceptance("User Activity / Read - bulk actions", function (needs) {
   needs.user();
@@ -22,14 +22,12 @@ acceptance("User Activity / Read - bulk actions", function (needs) {
     await click("button.bulk-select");
     await click(queryAll("input.bulk-select")[0]);
     await click(queryAll("input.bulk-select")[1]);
-    await click("button.bulk-select-actions");
+    await click(".bulk-select-topics-dropdown-trigger");
+    await click(".dropdown-menu__item .close-topics");
 
-    await click("div.bulk-buttons button:nth-child(2)"); // the Close Topics button
-
-    assert.notOk(
-      exists("div.bulk-buttons"),
-      "The bulk actions modal was closed"
-    );
+    assert
+      .dom("div.bulk-buttons")
+      .doesNotExist("The bulk actions modal was closed");
   });
 });
 
@@ -50,6 +48,6 @@ acceptance("User Activity / Read - empty state", function (needs) {
 
   test("It renders the empty state panel", async function (assert) {
     await visit("/u/charlie/activity/read");
-    assert.ok(exists("div.empty-state"));
+    assert.dom("div.empty-state").exists();
   });
 });

@@ -1,50 +1,46 @@
+import EmberObject from "@ember/object";
+import { getOwner } from "@ember/owner";
+import { setupTest } from "ember-qunit";
+import { module, test } from "qunit";
 import {
+  computedI18n,
   fmt,
   htmlSafe,
-  i18n,
   propertyEqual,
   propertyNotEqual,
   setting,
   url,
 } from "discourse/lib/computed";
-import EmberObject from "@ember/object";
-import I18n from "I18n";
-import { discourseModule } from "discourse/tests/helpers/qunit-helpers";
-import { setPrefix } from "discourse-common/lib/get-url";
-import sinon from "sinon";
-import { test } from "qunit";
+import { setPrefix } from "discourse/lib/get-url";
 
-discourseModule("Unit | Utility | computed", function (hooks) {
-  hooks.beforeEach(function () {
-    sinon.stub(I18n, "t").callsFake(function (scope) {
-      return "%@ translated: " + scope;
-    });
-  });
-
-  hooks.afterEach(function () {
-    I18n.t.restore();
-  });
+module("Unit | Utility | computed", function (hooks) {
+  setupTest(hooks);
 
   test("setting", function (assert) {
+    const siteSettings = getOwner(this).lookup("service:site-settings");
+
+    // eslint-disable-next-line ember/no-classic-classes
     let t = EmberObject.extend({
-      siteSettings: this.siteSettings,
+      siteSettings,
       vehicle: setting("vehicle"),
       missingProp: setting("madeUpThing"),
     }).create();
 
-    this.siteSettings.vehicle = "airplane";
+    siteSettings.vehicle = "airplane";
     assert.strictEqual(
-      t.get("vehicle"),
+      t.vehicle,
       "airplane",
       "it has the value of the site setting"
     );
-    assert.ok(
-      !t.get("missingProp"),
-      "it is falsy when the site setting is not defined"
+    assert.strictEqual(
+      t.missingProp,
+      undefined,
+      "is falsy when the site setting is not defined"
     );
   });
 
   test("propertyEqual", function (assert) {
+    // eslint-disable-next-line ember/no-classic-classes
     let t = EmberObject.extend({
       same: propertyEqual("cookies", "biscuits"),
     }).create({
@@ -52,12 +48,13 @@ discourseModule("Unit | Utility | computed", function (hooks) {
       biscuits: 10,
     });
 
-    assert.ok(t.get("same"), "it is true when the properties are the same");
+    assert.true(t.same, "is true when the properties are the same");
     t.set("biscuits", 9);
-    assert.ok(!t.get("same"), "it isn't true when one property is different");
+    assert.false(t.same, "isn't true when one property is different");
   });
 
   test("propertyNotEqual", function (assert) {
+    // eslint-disable-next-line ember/no-classic-classes
     let t = EmberObject.extend({
       diff: propertyNotEqual("cookies", "biscuits"),
     }).create({
@@ -65,12 +62,13 @@ discourseModule("Unit | Utility | computed", function (hooks) {
       biscuits: 10,
     });
 
-    assert.ok(!t.get("diff"), "it isn't true when the properties are the same");
+    assert.false(t.diff, "isn't true when the properties are the same");
     t.set("biscuits", 9);
-    assert.ok(t.get("diff"), "it is true when one property is different");
+    assert.true(t.diff, "is true when one property is different");
   });
 
   test("fmt", function (assert) {
+    // eslint-disable-next-line ember/no-classic-classes
     let t = EmberObject.extend({
       exclaimyUsername: fmt("username", "!!! %@ !!!"),
       multiple: fmt("username", "mood", "%@ is %@"),
@@ -80,60 +78,61 @@ discourseModule("Unit | Utility | computed", function (hooks) {
     });
 
     assert.strictEqual(
-      t.get("exclaimyUsername"),
+      t.exclaimyUsername,
       "!!! eviltrout !!!",
       "it inserts the string"
     );
     assert.strictEqual(
-      t.get("multiple"),
+      t.multiple,
       "eviltrout is happy",
       "it inserts multiple strings"
     );
 
     t.set("username", "codinghorror");
     assert.strictEqual(
-      t.get("multiple"),
+      t.multiple,
       "codinghorror is happy",
       "it supports changing properties"
     );
     t.set("mood", "ecstatic");
     assert.strictEqual(
-      t.get("multiple"),
+      t.multiple,
       "codinghorror is ecstatic",
       "it supports changing another property"
     );
   });
 
   test("i18n", function (assert) {
+    // eslint-disable-next-line ember/no-classic-classes
     let t = EmberObject.extend({
-      exclaimyUsername: i18n("username", "!!! %@ !!!"),
-      multiple: i18n("username", "mood", "%@ is %@"),
+      exclaimyUsername: computedI18n("username", "!!! %@ !!!"),
+      multiple: computedI18n("username", "mood", "%@ is %@"),
     }).create({
       username: "eviltrout",
       mood: "happy",
     });
 
     assert.strictEqual(
-      t.get("exclaimyUsername"),
-      "%@ translated: !!! eviltrout !!!",
+      t.exclaimyUsername,
+      "[en.!!! eviltrout !!!]",
       "it inserts the string and then translates"
     );
     assert.strictEqual(
-      t.get("multiple"),
-      "%@ translated: eviltrout is happy",
+      t.multiple,
+      "[en.eviltrout is happy]",
       "it inserts multiple strings and then translates"
     );
 
     t.set("username", "codinghorror");
     assert.strictEqual(
-      t.get("multiple"),
-      "%@ translated: codinghorror is happy",
+      t.multiple,
+      "[en.codinghorror is happy]",
       "it supports changing properties"
     );
     t.set("mood", "ecstatic");
     assert.strictEqual(
-      t.get("multiple"),
-      "%@ translated: codinghorror is ecstatic",
+      t.multiple,
+      "[en.codinghorror is ecstatic]",
       "it supports changing another property"
     );
   });
@@ -141,13 +140,14 @@ discourseModule("Unit | Utility | computed", function (hooks) {
   test("url", function (assert) {
     let t, testClass;
 
+    // eslint-disable-next-line ember/no-classic-classes
     testClass = EmberObject.extend({
       userUrl: url("username", "/u/%@"),
     });
 
     t = testClass.create({ username: "eviltrout" });
     assert.strictEqual(
-      t.get("userUrl"),
+      t.userUrl,
       "/u/eviltrout",
       "it supports urls without a prefix"
     );
@@ -155,7 +155,7 @@ discourseModule("Unit | Utility | computed", function (hooks) {
     setPrefix("/prefixed");
     t = testClass.create({ username: "eviltrout" });
     assert.strictEqual(
-      t.get("userUrl"),
+      t.userUrl,
       "/prefixed/u/eviltrout",
       "it supports urls with a prefix"
     );
@@ -163,10 +163,11 @@ discourseModule("Unit | Utility | computed", function (hooks) {
 
   test("htmlSafe", function (assert) {
     const cookies = "<p>cookies and <b>biscuits</b></p>";
+    // eslint-disable-next-line ember/no-classic-classes
     const t = EmberObject.extend({
       desc: htmlSafe("cookies"),
     }).create({ cookies });
 
-    assert.strictEqual(t.get("desc").string, cookies);
+    assert.strictEqual(t.desc.toString(), cookies);
   });
 });

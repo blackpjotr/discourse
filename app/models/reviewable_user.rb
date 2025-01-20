@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 class ReviewableUser < Reviewable
-
   def self.create_for(user)
-    create(
-      created_by_id: Discourse.system_user.id,
-      target: user
-    )
+    create(created_by_id: Discourse.system_user.id, target: user)
+  end
+
+  def self.additional_args(params)
+    { reject_reason: params[:reject_reason], send_email: params[:send_email] != "false" }
   end
 
   def build_actions(actions, guardian, args)
@@ -14,7 +14,7 @@ class ReviewableUser < Reviewable
 
     if guardian.can_approve?(target)
       actions.add(:approve_user) do |a|
-        a.icon = 'user-plus'
+        a.icon = "user-plus"
         a.label = "reviewables.actions.approve_user.title"
       end
     end
@@ -29,11 +29,7 @@ class ReviewableUser < Reviewable
     DiscourseEvent.trigger(:user_approved, target)
 
     if args[:send_email] != false && SiteSetting.must_approve_users?
-      Jobs.enqueue(
-        :critical_user_email,
-        type: "signup_after_approval",
-        user_id: target.id
-      )
+      Jobs.enqueue(:critical_user_email, type: "signup_after_approval", user_id: target.id)
     end
     StaffActionLogger.new(performed_by).log_user_approve(target)
 
@@ -50,13 +46,14 @@ class ReviewableUser < Reviewable
       begin
         self.reject_reason = args[:reject_reason]
 
+        # Without this, we end up sending the email even if this reject_reason is too long.
+        self.validate!
+
         if args[:send_email] && SiteSetting.must_approve_users?
           # Execute job instead of enqueue because user has to exists to send email
-          Jobs::CriticalUserEmail.new.execute({
-            type: :signup_after_reject,
-            user_id: target.id,
-            reject_reason: self.reject_reason
-          })
+          Jobs::CriticalUserEmail.new.execute(
+            { type: :signup_after_reject, user_id: target.id, reject_reason: self.reject_reason },
+          )
         end
 
         delete_args = {}
@@ -95,7 +92,7 @@ class ReviewableUser < Reviewable
   end
 
   def is_a_suspect_user?
-    reviewable_scores.any? { |rs| rs.reason == 'suspect_user' }
+    reviewable_scores.any? { |rs| rs.reason == "suspect_user" }
   end
 end
 
@@ -105,10 +102,9 @@ end
 #
 #  id                      :bigint           not null, primary key
 #  type                    :string           not null
-#  status                  :integer          default(0), not null
+#  status                  :integer          default("pending"), not null
 #  created_by_id           :integer          not null
 #  reviewable_by_moderator :boolean          default(FALSE), not null
-#  reviewable_by_group_id  :integer
 #  category_id             :integer
 #  topic_id                :integer
 #  score                   :float            default(0.0), not null
@@ -123,6 +119,7 @@ end
 #  updated_at              :datetime         not null
 #  force_review            :boolean          default(FALSE), not null
 #  reject_reason           :text
+#  potentially_illegal     :boolean          default(FALSE)
 #
 # Indexes
 #

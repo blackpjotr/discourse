@@ -1,23 +1,19 @@
 # frozen_string_literal: true
 
-require 'suggested_topics_builder'
+require "suggested_topics_builder"
 
 RSpec.describe SuggestedTopicsBuilder do
-  fab!(:topic) { Fabricate(:topic) }
+  fab!(:topic)
   let(:builder) { SuggestedTopicsBuilder.new(topic) }
 
-  before do
-    SiteSetting.suggested_topics = 5
-  end
+  before { SiteSetting.suggested_topics = 5 }
 
   describe "splicing category results" do
     def fake_topic(topic_id, category_id)
       build(:topic, id: topic_id, category_id: category_id)
     end
 
-    let(:builder) do
-      SuggestedTopicsBuilder.new(fake_topic(1, 1))
-    end
+    let(:builder) { SuggestedTopicsBuilder.new(fake_topic(1, 1)) }
 
     it "prioritizes category correctly" do
       builder.splice_results([fake_topic(2, 2)], :high)
@@ -100,6 +96,31 @@ RSpec.describe SuggestedTopicsBuilder do
         builder.add_results(Topic)
         expect(builder.size).to eq(0)
         expect(builder).not_to be_full
+      end
+    end
+
+    context "with suggested_topics_add_results modifier registered" do
+      fab!(:included_topic) { Fabricate(:topic) }
+      fab!(:excluded_topic) { Fabricate(:topic) }
+
+      let(:modifier_block) do
+        Proc.new { |results| results.filter { |topic| topic.id != excluded_topic.id } }
+      end
+
+      it "Allows modifications to added results" do
+        plugin_instance = Plugin::Instance.new
+        plugin_instance.register_modifier(:suggested_topics_add_results, &modifier_block)
+
+        builder.add_results(Topic.where(id: [included_topic.id, excluded_topic.id]))
+
+        expect(builder.results).to include(included_topic)
+        expect(builder.results).not_to include(excluded_topic)
+      ensure
+        DiscoursePluginRegistry.unregister_modifier(
+          plugin_instance,
+          :suggested_topics_add_results,
+          &modifier_block
+        )
       end
     end
   end

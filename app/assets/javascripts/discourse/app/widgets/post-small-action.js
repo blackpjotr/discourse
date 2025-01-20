@@ -1,13 +1,15 @@
-import I18n from "I18n";
-import RawHtml from "discourse/widgets/raw-html";
-import { autoUpdatingRelativeAge } from "discourse/lib/formatter";
-import { avatarFor } from "discourse/widgets/post";
 import { computed } from "@ember/object";
-import { createWidget } from "discourse/widgets/widget";
-import { h } from "virtual-dom";
-import { iconNode } from "discourse-common/lib/icon-library";
-import { userPath } from "discourse/lib/url";
 import { htmlSafe } from "@ember/template";
+import { h } from "virtual-dom";
+import { autoUpdatingRelativeAge } from "discourse/lib/formatter";
+import { iconNode } from "discourse/lib/icon-library";
+import { userPath } from "discourse/lib/url";
+import DecoratorHelper from "discourse/widgets/decorator-helper";
+import { avatarFor } from "discourse/widgets/post";
+import PostCooked from "discourse/widgets/post-cooked";
+import RawHtml from "discourse/widgets/raw-html";
+import { createWidget } from "discourse/widgets/widget";
+import { i18n } from "discourse-i18n";
 
 export function actionDescriptionHtml(actionCode, createdAt, username, path) {
   const dt = new Date(createdAt);
@@ -23,25 +25,37 @@ export function actionDescriptionHtml(actionCode, createdAt, username, path) {
       who = `<a class="mention" href="${userPath(username)}">@${username}</a>`;
     }
   }
-  return htmlSafe(I18n.t(`action_codes.${actionCode}`, { who, when, path }));
+  return htmlSafe(i18n(`action_codes.${actionCode}`, { who, when, path }));
 }
 
-export function actionDescription(actionCode, createdAt, username) {
+export function actionDescription(
+  actionCode,
+  createdAt,
+  username,
+  path = null
+) {
   return computed(actionCode, createdAt, function () {
     const ac = this.get(actionCode);
     if (ac) {
-      return actionDescriptionHtml(ac, this.get(createdAt), this.get(username));
+      return actionDescriptionHtml(
+        ac,
+        this.get(createdAt),
+        this.get(username),
+        path ? this.get(path) : null
+      );
     }
   });
 }
+
+const addPostSmallActionClassesCallbacks = [];
 
 const groupActionCodes = ["invited_group", "removed_group"];
 
 const icons = {
   "closed.enabled": "lock",
-  "closed.disabled": "unlock-alt",
+  "closed.disabled": "unlock-keyhole",
   "autoclosed.enabled": "lock",
-  "autoclosed.disabled": "unlock-alt",
+  "autoclosed.disabled": "unlock-keyhole",
   "archived.enabled": "folder",
   "archived.disabled": "folder-open",
   "pinned.enabled": "thumbtack",
@@ -52,13 +66,14 @@ const icons = {
   "banner.disabled": "thumbtack unpinned",
   "visible.enabled": "far-eye",
   "visible.disabled": "far-eye-slash",
-  split_topic: "sign-out-alt",
-  invited_user: "plus-circle",
-  invited_group: "plus-circle",
-  user_left: "minus-circle",
-  removed_user: "minus-circle",
-  removed_group: "minus-circle",
+  split_topic: "right-from-bracket",
+  invited_user: "circle-plus",
+  invited_group: "circle-plus",
+  user_left: "circle-minus",
+  removed_user: "circle-minus",
+  removed_group: "circle-minus",
   public_topic: "comment",
+  open_topic: "comment",
   private_topic: "envelope",
   autobumped: "hand-point-right",
 };
@@ -71,61 +86,62 @@ export function addGroupPostSmallActionCode(actionCode) {
   groupActionCodes.push(actionCode);
 }
 
+export function addPostSmallActionClassesCallback(callback) {
+  addPostSmallActionClassesCallbacks.push(callback);
+}
+
+export function resetPostSmallActionClassesCallbacks() {
+  addPostSmallActionClassesCallbacks.length = 0;
+}
+
 export default createWidget("post-small-action", {
   buildKey: (attrs) => `post-small-act-${attrs.id}`,
-  tagName: "div.small-action.onscreen-post",
+  tagName: "article.small-action.onscreen-post",
+
+  buildAttributes(attrs) {
+    return {
+      "aria-label": i18n("share.post", {
+        postNumber: attrs.post_number,
+        username: attrs.username,
+      }),
+      role: "region",
+    };
+  },
 
   buildId(attrs) {
     return `post_${attrs.post_number}`;
   },
 
   buildClasses(attrs) {
+    let classNames = [];
+
     if (attrs.deleted) {
-      return "deleted";
+      classNames.push("deleted");
     }
+
+    if (addPostSmallActionClassesCallbacks.length > 0) {
+      addPostSmallActionClassesCallbacks.forEach((callback) => {
+        const additionalClasses = callback.call(this, attrs);
+
+        if (additionalClasses) {
+          classNames.push(...additionalClasses);
+        }
+      });
+    }
+
+    return classNames;
   },
 
   html(attrs) {
     const contents = [];
-
-    if (attrs.canRecover) {
-      contents.push(
-        this.attach("button", {
-          className: "small-action-recover",
-          icon: "undo",
-          action: "recoverPost",
-          title: "post.controls.undelete",
-        })
-      );
-    }
-
-    if (attrs.canDelete) {
-      contents.push(
-        this.attach("button", {
-          className: "small-action-delete",
-          icon: "trash-alt",
-          action: "deletePost",
-          title: "post.controls.delete",
-        })
-      );
-    }
-
-    if (attrs.canEdit && !attrs.canRecover) {
-      contents.push(
-        this.attach("button", {
-          className: "small-action-edit",
-          icon: "pencil-alt",
-          action: "editPost",
-          title: "post.controls.edit",
-        })
-      );
-    }
+    const buttons = [];
 
     contents.push(
       avatarFor.call(this, "small", {
         template: attrs.avatar_template,
         username: attrs.username,
         url: attrs.usernameUrl,
+        ariaHidden: false,
       })
     );
 
@@ -139,19 +155,56 @@ export default createWidget("post-small-action", {
         attrs.actionCodePath
       );
       contents.push(new RawHtml({ html: `<p>${description}</p>` }));
+    }
 
-      if (attrs.cooked) {
-        contents.push(
-          new RawHtml({
-            html: `<div class='custom-message'>${attrs.cooked}</div>`,
-          })
-        );
-      }
+    if (attrs.canRecover) {
+      buttons.push(
+        this.attach("button", {
+          className: "btn-flat small-action-recover",
+          icon: "arrow-rotate-left",
+          action: "recoverPost",
+          title: "post.controls.undelete",
+        })
+      );
+    }
+
+    if (attrs.canEdit && !attrs.canRecover) {
+      buttons.push(
+        this.attach("button", {
+          className: "btn-flat small-action-edit",
+          icon: "pencil",
+          action: "editPost",
+          title: "post.controls.edit",
+        })
+      );
+    }
+
+    if (attrs.canDelete) {
+      buttons.push(
+        this.attach("button", {
+          className: "btn-flat btn-danger small-action-delete",
+          icon: "trash-can",
+          action: "deletePost",
+          title: "post.controls.delete",
+        })
+      );
     }
 
     return [
       h("div.topic-avatar", iconNode(icons[attrs.actionCode] || "exclamation")),
-      h("div.small-action-desc", contents),
+      h("div.small-action-desc", [
+        h("div.small-action-contents", contents),
+        h("div.small-action-buttons", buttons),
+        !attrs.actionDescriptionWidget && attrs.cooked
+          ? h("div.small-action-custom-message", [
+              new PostCooked(
+                attrs,
+                new DecoratorHelper(this),
+                this.currentUser
+              ),
+            ])
+          : null,
+      ]),
     ];
   },
 });

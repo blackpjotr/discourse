@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
-
 RSpec.describe Jobs::SyncAclsForUploads do
   let(:upload1) { Fabricate(:upload) }
   let(:upload2) { Fabricate(:upload) }
@@ -29,7 +27,13 @@ RSpec.describe Jobs::SyncAclsForUploads do
     end
 
     it "handles updates throwing an exception" do
-      Discourse.store.expects(:update_upload_ACL).raises(StandardError).then.returns(true, true).times(3)
+      Discourse
+        .store
+        .expects(:update_upload_ACL)
+        .raises(StandardError)
+        .then
+        .returns(true, true)
+        .times(3)
       Discourse.expects(:warn_exception).once
       run_job
     end

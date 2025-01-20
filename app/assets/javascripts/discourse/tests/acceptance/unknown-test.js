@@ -1,7 +1,6 @@
-import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
 import { click, currentURL, visit } from "@ember/test-helpers";
 import { test } from "qunit";
-import sinon from "sinon";
+import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
 acceptance("Category 404", function (needs) {
   needs.pretender((server, helper) => {
@@ -15,16 +14,10 @@ acceptance("Category 404", function (needs) {
   });
 
   test("Navigating to a bad category link does not break the router", async function (assert) {
-    // Don't log the XHR error
-    const stub = sinon
-      .stub(console, "error")
-      .withArgs(sinon.match({ status: 404 }));
-
     await visit("/t/internationalization-localization/280");
 
     await click('[data-for-test="category-404"]');
     assert.strictEqual(currentURL(), "/404");
-    sinon.assert.calledOnce(stub);
 
     // See that we can navigate away
     await click("#site-logo");
@@ -58,7 +51,7 @@ acceptance("Unknown", function (needs) {
 
   test("Permalink Unknown URL", async function (assert) {
     await visit("/url-that-doesn't-exist");
-    assert.ok(exists(".page-not-found"), "The not found content is present");
+    assert.dom(".page-not-found").exists("the not found content is present");
   });
 
   test("Permalink URL to a Topic", async function (assert) {

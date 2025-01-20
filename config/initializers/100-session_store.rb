@@ -4,12 +4,19 @@
 
 Rails.application.config.session_store(
   :discourse_cookie_store,
-  key: '_forum_session',
-  path: (Rails.application.config.relative_url_root.nil?) ? '/' : Rails.application.config.relative_url_root
+  key: "_forum_session",
+  path:
+    (
+      if (Rails.application.config.relative_url_root.nil?)
+        "/"
+      else
+        Rails.application.config.relative_url_root
+      end
+    ),
 )
 
 Rails.application.config.to_prepare do
-  if Rails.env.development? && SiteSetting.force_https
+  if Rails.env.development? && SiteSetting.force_https && !ENV["DISCOURSE_DEV_ALLOW_HTTPS"]
     STDERR.puts
     STDERR.puts "WARNING: force_https is enabled in dev"
     STDERR.puts "It is very unlikely you are running HTTPS in dev."

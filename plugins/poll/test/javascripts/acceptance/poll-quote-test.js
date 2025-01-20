@@ -1,14 +1,10 @@
-import { acceptance, count } from "discourse/tests/helpers/qunit-helpers";
-import { clearPopupMenuOptionsCallback } from "discourse/controllers/composer";
-import { test } from "qunit";
 import { click, visit } from "@ember/test-helpers";
+import { test } from "qunit";
+import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
 acceptance("Poll quote", function (needs) {
   needs.user();
   needs.settings({ poll_enabled: true });
-  needs.hooks.beforeEach(() => {
-    clearPopupMenuOptionsCallback();
-  });
 
   needs.pretender((server, helper) => {
     server.get("/posts/by_number/130/1", () => {
@@ -431,7 +427,7 @@ acceptance("Poll quote", function (needs) {
   test("renders and extends", async function (assert) {
     await visit("/t/-/topic_with_two_quoted_polls");
     await click(".quote-controls");
-    assert.strictEqual(count(".poll"), 2, "polls are rendered");
-    assert.strictEqual(count(".poll-buttons"), 2, "polls are extended");
+    assert.dom(".poll").exists({ count: 2 }, "polls are rendered");
+    assert.dom(".poll-buttons").exists({ count: 2 }, "polls are extended");
   });
 });

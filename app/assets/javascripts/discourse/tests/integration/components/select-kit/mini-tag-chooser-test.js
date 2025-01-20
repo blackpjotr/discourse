@@ -1,10 +1,10 @@
+import { click, render, triggerKeyEvent } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { render } from "@ember/test-helpers";
-import { exists, query, queryAll } from "discourse/tests/helpers/qunit-helpers";
-import I18n from "I18n";
-import { hbs } from "ember-cli-htmlbars";
+import { query, queryAll } from "discourse/tests/helpers/qunit-helpers";
 import selectKit from "discourse/tests/helpers/select-kit-helper";
+import { i18n } from "discourse-i18n";
 
 module(
   "Integration | Component | select-kit/mini-tag-chooser",
@@ -34,12 +34,12 @@ module(
       await this.subject.fillInFilter("mon");
       assert.deepEqual(
         [...queryAll(".select-kit-row")].map((el) => el.textContent.trim()),
-        ["monkey x1", "gazelle x2"]
+        ["monkey x1", "gazelle x2", "dog x3", "cat x4"]
       );
       await this.subject.fillInFilter("key");
       assert.deepEqual(
         [...queryAll(".select-kit-row")].map((el) => el.textContent.trim()),
-        ["monkey x1", "gazelle x2"]
+        ["monkey x1", "gazelle x2", "dog x3", "cat x4"]
       );
       await this.subject.selectRowByValue("monkey");
 
@@ -58,13 +58,31 @@ module(
       await this.subject.fillInFilter("baz");
       await this.subject.selectRowByValue("monkey");
 
-      const error = query(".select-kit-error").innerText;
-      assert.strictEqual(
-        error,
-        I18n.t("select_kit.max_content_reached", {
+      assert.dom(".select-kit-error").hasText(
+        i18n("select_kit.max_content_reached", {
           count: this.siteSettings.max_tags_per_topic,
         })
       );
+    });
+
+    test("disables search and shows limit when max_tags_per_topic is zero", async function (assert) {
+      this.set("value", ["cat", "kit"]);
+      this.siteSettings.max_tags_per_topic = 0;
+
+      await render(hbs`<MiniTagChooser @value={{this.value}} />`);
+
+      assert.strictEqual(this.subject.header().value(), "cat,kit");
+      await this.subject.expand();
+
+      assert.dom(".select-kit-error").hasText(
+        i18n("select_kit.max_content_reached", {
+          count: 0,
+        })
+      );
+      await this.subject.fillInFilter("dawg");
+      assert
+        .dom(".select-kit-collection .select-kit-row")
+        .doesNotExist("doesn’t show any options");
     });
 
     test("required_tag_group", async function (assert) {
@@ -80,7 +98,7 @@ module(
 
       assert.strictEqual(
         query("input[name=filter-input-search]").placeholder,
-        I18n.t("tagging.choose_for_topic_required_group", {
+        i18n("tagging.choose_for_topic_required_group", {
           count: 1,
           name: "monkey group",
         })
@@ -90,7 +108,7 @@ module(
 
       assert.strictEqual(
         query("input[name=filter-input-search]").placeholder,
-        I18n.t("select_kit.filter_placeholder")
+        i18n("select_kit.filter_placeholder")
       );
     });
 
@@ -99,19 +117,17 @@ module(
       await this.subject.expand();
       await this.subject.fillInFilter("#");
 
-      assert.notOk(exists(".select-kit-error"), "it doesn’t show any error");
-      assert.notOk(
-        exists(".select-kit-row[data-value='#']"),
-        "it doesn’t allow to create this tag"
-      );
+      assert.dom(".select-kit-error").doesNotExist("doesn’t show any error");
+      assert
+        .dom(".select-kit-row[data-value='#']")
+        .doesNotExist("doesn't allow to create this tag");
 
       await this.subject.fillInFilter("test");
 
-      assert.equal(this.subject.filter().value(), "#test");
-      assert.ok(
-        exists(".select-kit-row[data-value='test']"),
-        "it filters out the invalid char from the suggested tag"
-      );
+      assert.strictEqual(this.subject.filter().value(), "#test");
+      assert
+        .dom(".select-kit-row[data-value='test']")
+        .exists("filters out the invalid char from the suggested tag");
     });
 
     test("creating a tag over the length limit", async function (assert) {
@@ -120,10 +136,9 @@ module(
       await this.subject.expand();
       await this.subject.fillInFilter("foo");
 
-      assert.ok(
-        exists(".select-kit-row[data-value='f']"),
-        "it forces the max length of the tag"
-      );
+      assert
+        .dom(".select-kit-row[data-value='f']")
+        .exists("forces the max length of the tag");
     });
 
     test("values in hiddenFromPreview will not display in preview", async function (assert) {
@@ -133,10 +148,7 @@ module(
       await render(
         hbs`<MiniTagChooser @options={{hash allowAny=true hiddenValues=this.hiddenValues}} @value={{this.value}} />`
       );
-      assert.strictEqual(
-        query(".formatted-selection").textContent.trim(),
-        "bar"
-      );
+      assert.dom(".formatted-selection").hasText("bar");
 
       await this.subject.expand();
       assert.deepEqual(
@@ -145,6 +157,86 @@ module(
         ),
         ["bar"]
       );
+    });
+  }
+);
+
+module(
+  "Integration | Component | select-kit/mini-tag-chooser useHeaderFilter=true",
+  function (hooks) {
+    setupRenderingTest(hooks);
+
+    hooks.beforeEach(function () {
+      this.set("subject", selectKit());
+    });
+
+    test("displays tags and filter in header", async function (assert) {
+      this.set("value", ["apple", "orange", "potato"]);
+
+      await render(
+        hbs`<MiniTagChooser @value={{this.value}} @options={{hash filterable=true useHeaderFilter=true}} />`
+      );
+
+      assert.strictEqual(this.subject.header().value(), "apple,orange,potato");
+
+      assert.dom(".select-kit-header--filter").exists();
+      assert.dom(".select-kit-header button[data-name='apple']").exists();
+      assert.dom(".select-kit-header button[data-name='orange']").exists();
+      assert.dom(".select-kit-header button[data-name='potato']").exists();
+
+      const filterInput = ".select-kit-header .filter-input";
+      await click(filterInput);
+
+      await triggerKeyEvent(filterInput, "keydown", "ArrowDown");
+      await triggerKeyEvent(filterInput, "keydown", "Enter");
+
+      assert.dom(".select-kit-header button[data-name='monkey']").exists();
+
+      await triggerKeyEvent(filterInput, "keydown", "Backspace");
+
+      assert
+        .dom(".select-kit-header button[data-name='monkey']")
+        .doesNotExist();
+
+      await this.subject.fillInFilter("foo");
+      await triggerKeyEvent(filterInput, "keydown", "Backspace");
+
+      assert.dom(".select-kit-header button[data-name='potato']").exists();
+    });
+
+    test("removing a tag does not display the dropdown", async function (assert) {
+      this.set("value", ["apple", "orange", "potato"]);
+
+      await render(
+        hbs`<MiniTagChooser @value={{this.value}} @options={{hash filterable=true useHeaderFilter=true}} />`
+      );
+
+      assert.strictEqual(this.subject.header().value(), "apple,orange,potato");
+
+      await click(".select-kit-header button[data-name='apple']");
+
+      assert.dom(".select-kit-collection").doesNotExist();
+      assert.dom(".select-kit-header button[data-name='apple']").doesNotExist();
+      assert.strictEqual(this.subject.header().value(), "orange,potato");
+
+      assert
+        .dom(".select-kit-header .filter-input")
+        .hasAttribute(
+          "placeholder",
+          "",
+          "Placeholder is empty when there is a selection"
+        );
+
+      await click(".select-kit-header button[data-name='orange']");
+      await click(".select-kit-header button[data-name='potato']");
+
+      assert
+        .dom(".select-kit-header .filter-input")
+        .hasAttribute(
+          "placeholder",
+          "Search…",
+          "Placeholder is back to default when there is no selection"
+        );
     });
   }
 );

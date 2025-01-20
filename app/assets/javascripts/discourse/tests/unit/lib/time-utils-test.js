@@ -1,8 +1,5 @@
-import {
-  discourseModule,
-  withFrozenTime,
-} from "discourse/tests/helpers/qunit-helpers";
-
+import { setupTest } from "ember-qunit";
+import { module, test } from "qunit";
 import {
   laterThisWeek,
   laterToday,
@@ -10,11 +7,13 @@ import {
   startOfDay,
   tomorrow,
 } from "discourse/lib/time-utils";
-import { test } from "qunit";
+import { withFrozenTime } from "discourse/tests/helpers/qunit-helpers";
 
 const timezone = "Australia/Brisbane";
 
-discourseModule("Unit | lib | timeUtils", function () {
+module("Unit | lib | timeUtils", function (hooks) {
+  setupTest(hooks);
+
   test("nextMonth gets next month correctly", function (assert) {
     withFrozenTime("2019-12-11T08:00:00", timezone, () => {
       assert.strictEqual(

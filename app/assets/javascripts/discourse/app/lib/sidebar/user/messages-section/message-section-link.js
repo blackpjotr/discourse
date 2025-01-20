@@ -1,5 +1,4 @@
 import { tracked } from "@glimmer/tracking";
-
 import {
   INBOX,
   NEW,
@@ -70,5 +69,17 @@ export default class MessageSectionLink {
 
   get _shouldTrack() {
     return this.type === NEW || this.type === UNREAD;
+  }
+
+  get prefixType() {
+    if (this._isInbox) {
+      return "icon";
+    }
+  }
+
+  get prefixValue() {
+    if (this._isInbox) {
+      return "inbox";
+    }
   }
 }

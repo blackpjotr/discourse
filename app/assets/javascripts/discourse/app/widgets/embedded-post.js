@@ -1,22 +1,23 @@
+import { h } from "virtual-dom";
 import DecoratorHelper from "discourse/widgets/decorator-helper";
+import hbs from "discourse/widgets/hbs-compiler";
 import PostCooked from "discourse/widgets/post-cooked";
 import { createWidget } from "discourse/widgets/widget";
-import { h } from "virtual-dom";
-import hbs from "discourse/widgets/hbs-compiler";
 
 createWidget("post-link-arrow", {
   tagName: "div.post-link-arrow",
 
   template: hbs`
-    {{#if attrs.above}}
-      <a href={{attrs.shareUrl}} class="post-info arrow" title={{i18n "topic.jump_reply_up"}}>
+      <a href={{attrs.shareUrl}} class="post-info arrow" title={{i18n "topic.jump_reply"}} aria-label={{i18n
+        "topic.jump_reply_aria" username=attrs.name
+      }}>
+      {{#if attrs.above}}
         {{d-icon "arrow-up"}}
-      </a>
-    {{else}}
-      <a href={{attrs.shareUrl}} class="post-info arrow" title={{i18n "topic.jump_reply_down"}}>
+      {{else}}
         {{d-icon "arrow-down"}}
+      {{/if}}
+      {{i18n "topic.jump_reply_button"}}
       </a>
-    {{/if}}
   `,
 });
 
@@ -44,6 +45,7 @@ export default createWidget("embedded-post", {
           h("div.topic-meta-data.embedded-reply", [
             this.attach("poster-name", attrs),
             this.attach("post-link-arrow", {
+              name: attrs.username,
               above: state.above,
               shareUrl: attrs.customShare,
             }),
@@ -52,5 +54,13 @@ export default createWidget("embedded-post", {
         ]),
       ]),
     ];
+  },
+
+  init() {
+    this.postContentsDestroyCallbacks = [];
+  },
+
+  destroy() {
+    this.postContentsDestroyCallbacks.forEach((c) => c());
   },
 });

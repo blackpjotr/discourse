@@ -1,8 +1,8 @@
+import { render, triggerEvent } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { render } from "@ember/test-helpers";
-import { hbs } from "ember-cli-htmlbars";
-import { exists, query } from "discourse/tests/helpers/qunit-helpers";
+import { query } from "discourse/tests/helpers/qunit-helpers";
 
 module("Integration | Component | user-info", function (hooks) {
   setupRenderingTest(hooks);
@@ -13,8 +13,8 @@ module("Integration | Component | user-info", function (hooks) {
 
     await render(hbs`<UserInfo @user={{this.currentUser}} />`);
 
-    assert.strictEqual(query(".name.bold").innerText.trim(), "Evil Trout");
-    assert.strictEqual(query(".username.margin").innerText.trim(), "eviltrout");
+    assert.dom(".name").hasText("Evil Trout");
+    assert.dom(".username").hasText("eviltrout");
   });
 
   test("prioritized username", async function (assert) {
@@ -23,8 +23,8 @@ module("Integration | Component | user-info", function (hooks) {
 
     await render(hbs`<UserInfo @user={{this.currentUser}} />`);
 
-    assert.strictEqual(query(".username.bold").innerText.trim(), "eviltrout");
-    assert.strictEqual(query(".name.margin").innerText.trim(), "Evil Trout");
+    assert.dom(".username").hasText("eviltrout");
+    assert.dom(".name").hasText("Evil Trout");
   });
 
   test("includeLink", async function (assert) {
@@ -33,10 +33,12 @@ module("Integration | Component | user-info", function (hooks) {
     );
 
     this.set("includeLink", true);
-    assert.ok(exists(`.username a[href="/u/${this.currentUser.username}"]`));
+    assert.dom(`.name-line a[href="/u/${this.currentUser.username}"]`).exists();
 
     this.set("includeLink", false);
-    assert.notOk(exists(`.username a[href="/u/${this.currentUser.username}"]`));
+    assert
+      .dom(`.name-line a[href="/u/${this.currentUser.username}"]`)
+      .doesNotExist();
   });
 
   test("includeAvatar", async function (assert) {
@@ -45,10 +47,10 @@ module("Integration | Component | user-info", function (hooks) {
     );
 
     this.set("includeAvatar", true);
-    assert.ok(exists(".user-image"));
+    assert.dom(".user-image").exists();
 
     this.set("includeAvatar", false);
-    assert.notOk(exists(".user-image"));
+    assert.dom(".user-image").doesNotExist();
   });
 
   test("shows status if enabled and user has status", async function (assert) {
@@ -59,7 +61,7 @@ module("Integration | Component | user-info", function (hooks) {
       hbs`<UserInfo @user={{this.currentUser}} @showStatus={{true}} />`
     );
 
-    assert.ok(exists(".user-status-message"));
+    assert.dom(".user-status-message").exists();
   });
 
   test("doesn't show status if enabled but user doesn't have status", async function (assert) {
@@ -69,7 +71,7 @@ module("Integration | Component | user-info", function (hooks) {
       hbs`<UserInfo @user={{this.currentUser}} @showStatus={{true}} />`
     );
 
-    assert.notOk(exists(".user-status-message"));
+    assert.dom(".user-status-message").doesNotExist();
   });
 
   test("doesn't show status if disabled", async function (assert) {
@@ -80,7 +82,7 @@ module("Integration | Component | user-info", function (hooks) {
       hbs`<UserInfo @user={{this.currentUser}} @showStatus={{false}} />`
     );
 
-    assert.notOk(exists(".user-status-message"));
+    assert.dom(".user-status-message").doesNotExist();
   });
 
   test("doesn't show status by default", async function (assert) {
@@ -89,6 +91,46 @@ module("Integration | Component | user-info", function (hooks) {
 
     await render(hbs`<UserInfo @user={{this.currentUser}} />`);
 
-    assert.notOk(exists(".user-status-message"));
+    assert.dom(".user-status-message").doesNotExist();
+  });
+
+  test("doesn't show status description by default", async function (assert) {
+    this.currentUser.name = "Evil Trout";
+    this.currentUser.status = { emoji: "tooth", description: "off to dentist" };
+
+    await render(
+      hbs`<UserInfo @user={{this.currentUser}} @showStatus={{true}} />`
+    );
+
+    assert
+      .dom(".user-status-message .user-status-message-description")
+      .doesNotExist();
+  });
+
+  test("shows status description if enabled", async function (assert) {
+    this.currentUser.name = "Evil Trout";
+    this.currentUser.status = { emoji: "tooth", description: "off to dentist" };
+
+    await render(
+      hbs`<UserInfo @user={{this.currentUser}} @showStatus={{true}} @showStatusDescription={{true}} />`
+    );
+
+    assert
+      .dom(".user-status-message .user-status-message-description")
+      .exists();
+  });
+
+  test("shows status tooltip if enabled", async function (assert) {
+    this.currentUser.name = "Evil Trout";
+    this.currentUser.status = { emoji: "tooth", description: "off to dentist" };
+
+    await render(
+      hbs`<UserInfo @user={{this.currentUser}} @showStatus={{true}} /><DTooltips />`
+    );
+    await triggerEvent(query(".user-status-message"), "pointermove");
+
+    assert
+      .dom("[data-content][data-identifier='user-status-message-tooltip']")
+      .exists();
   });
 });

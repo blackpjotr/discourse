@@ -16,7 +16,7 @@ export const emojis = [
   "blush",
   "slightly_smiling_face",
   "upside_down_face",
-  "relaxed",
+  "smiling_face",
   "yum",
   "relieved",
   "heart_eyes",
@@ -1827,10 +1827,6 @@ export const emojis = [
   "kiss_woman_man",
   "couple_with_heart_woman_man",
   "family_man_woman_boy",
-  "red_hair",
-  "curly_hair",
-  "white_hair",
-  "bald",
   "coral",
   "lotus",
   "empty_nest",
@@ -2341,6 +2337,7 @@ export const aliases = {
   face_vomiting: ["puke"],
   smile: ["grinning_face_with_smiling_eyes"],
   frowning_with_open_mouth: ["frowning_face_with_open_mouth"],
+  smiling_face: ["relaxed"],
 };
 export const searchAliases = {
   sad: [
@@ -6376,7 +6373,7 @@ export const replacements = {
   "😊": "blush",
   "🙂": "slightly_smiling_face",
   "🙃": "upside_down_face",
-  "☺": "relaxed",
+  "☺": "smiling_face",
   "😋": "yum",
   "😌": "relieved",
   "😍": "heart_eyes",

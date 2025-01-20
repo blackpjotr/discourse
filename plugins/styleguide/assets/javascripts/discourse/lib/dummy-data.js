@@ -98,7 +98,7 @@ export function createData(store) {
           posts_count: ((topicId * 1234) % 100) + 1,
           views: ((topicId * 123) % 1000) + 1,
           like_count: topicId % 3,
-          created_at: `2017-03-${topicId}`,
+          created_at: `2017-03-${topicId % 30}T12:30:00.000Z`,
           visible: true,
           posters: [
             { extras: "latest", user },
@@ -153,47 +153,187 @@ export function createData(store) {
 
     <p>Case everti equidem ius ea, ubique veritus vim id. Eros omnium conclusionemque qui te, usu error alienum imperdiet ut, ex ius meis adipisci. Libris reprehendunt eos ex, mea at nisl suavitate. Altera virtute democritum pro cu, melius latine in ius.</p>`;
 
-  let transformedPost = {
+  const excerpt =
+    "<p>Lorem ipsum dolor sit amet, et nec quis viderer prompta, ex omnium ponderum insolens eos, sed discere invenire principes in. Fuisset constituto per ad. Est no scripta propriae facilisis, viderer impedit deserunt in mel. Quot debet facilisis ne vix, nam in detracto tacimates.</p>";
+
+  const transformedPost = {
     id: 1234,
+    topic,
+    user: {
+      avatar_template: user.avatar_template,
+      id: user.id,
+      username: user.username,
+      name: user.name,
+    },
+    name: user.name,
+    username: user.username,
+    avatar_template: user.avatar_template,
+    category: {
+      id: categories[0].id,
+      name: categories[0].name,
+      color: categories[0].color,
+    },
+    created_at: "2024-11-13T21:12:37.835Z",
     cooked,
-    created_at: moment().subtract(3, "days"),
-    user_id: user.get("id"),
-    username: user.get("username"),
-    avatar_template: user.get("avatar_template"),
-    showLike: true,
-    canToggleLike: true,
-    canFlag: true,
-    canEdit: false,
-    canCreatePost: true,
-    canBookmark: true,
-    canManage: true,
-    canDelete: true,
-    createdByUsername: user.get("username"),
-    createdByAvatarTemplate: user.get("avatar_template"),
-    lastPostUsername: user.get("username"),
-    lastPostAvatarTemplate: user.get("avatar_template"),
-    topicReplyCount: 123,
-    topicViews: 3456,
-    participantCount: 10,
-    topicLikeCount: 14,
-    topicLinkLength: 5,
-    topicPostsCount: 4,
-    participants: [createUser(), createUser(), createUser(), createUser()],
-    topicLinks: [
+    excerpt,
+    post_number: 1,
+    post_type: 1,
+    updated_at: moment().subtract(2, "days"),
+    reply_count: 0,
+    reply_to_post_number: null,
+    quote_count: 0,
+    incoming_link_count: 0,
+    reads: 1,
+    readers_count: 0,
+    score: 0,
+    yours: false,
+    topic_id: topic.id,
+    topic_slug: topic.slug,
+    display_username: user.name,
+    primary_group_name: null,
+    flair_name: null,
+    flair_url: null,
+    flair_bg_color: null,
+    flair_color: null,
+    flair_group_id: null,
+    version: 1,
+    can_edit: true,
+    can_delete: true,
+    can_recover: true,
+    can_see_hidden_post: true,
+    can_wiki: true,
+    read: true,
+    user_title: "",
+    bookmarked: false,
+    actions_summary: [
       {
-        title: "Evil Trout",
-        url: "https://eviltrout.com",
-        domain: "eviltrout.com",
-        clicks: 1024,
+        id: 2,
+        count: 1,
+        acted: true,
+        can_undo: true,
       },
       {
-        title: "Cool Site",
-        url: "http://coolsite.example.com",
-        domain: "coolsite.example.com",
-        clicks: 512,
+        id: 6,
+        can_act: true,
+      },
+      {
+        id: 3,
+        can_act: true,
+      },
+      {
+        id: 4,
+        can_act: true,
+      },
+      {
+        id: 8,
+        can_act: true,
+      },
+      {
+        id: 10,
+        can_act: true,
+      },
+      {
+        id: 7,
+        can_act: true,
       },
     ],
+    moderator: false,
+    admin: true,
+    staff: true,
+    user_id: user.id,
+    hidden: false,
+    trust_level: user.trust_level,
+    deleted_at: null,
+    user_deleted: false,
+    edit_reason: null,
+    can_view_edit_history: true,
+    wiki: false,
+    activity_pub_enabled: false,
+    category_expert_approved_group: null,
+    needs_category_expert_approval: null,
+    can_manage_category_expert_posts: false,
+    reactions: [
+      {
+        id: "heart",
+        type: "emoji",
+        count: 1,
+      },
+    ],
+    current_user_reaction: {
+      id: "heart",
+      type: "emoji",
+      can_undo: true,
+    },
+    reaction_users_count: 1,
+    current_user_used_main_reaction: true,
+    shared_edits_enabled: null,
+    can_accept_answer: false,
+    can_unaccept_answer: false,
+    accepted_answer: false,
+    topic_accepted_answer: false,
+    can_translate: false,
   };
+
+  const postModel = store.createRecord("post", {
+    transformedPost,
+  });
+
+  postModel.set("topic", store.createRecord("topic", transformedPost.topic));
+
+  const postList = [
+    transformedPost,
+    {
+      id: 145,
+      topic: pinnedTopic,
+      created_at: "2024-03-15T18:45:38.720Z",
+      category: {
+        id: categories[2].id,
+        color: categories[2].color,
+        name: categories[2].name,
+      },
+      user: {
+        avatar_template: user.avatar_template,
+        id: user.id,
+        username: user.username,
+        name: user.name,
+      },
+      excerpt,
+    },
+    {
+      id: 144,
+      topic: archivedTopic,
+      created_at: "2024-02-15T18:45:38.720Z",
+      category: {
+        id: categories[1].id,
+        color: categories[1].color,
+        name: categories[1].name,
+      },
+      user: {
+        avatar_template: user.avatar_template,
+        id: user.id,
+        username: user.username,
+        name: user.name,
+      },
+      excerpt,
+    },
+    {
+      id: 143,
+      topic: closedTopic,
+      created_at: "2024-01-15T18:45:38.720Z",
+      category: {
+        id: categories[0].id,
+        color: categories[0].color,
+        name: categories[0].name,
+      },
+      user: {
+        avatar_template: user.avatar_template,
+        id: user.id,
+        username: user.username,
+        name: user.name,
+      },
+      excerpt,
+    },
+  ];
 
   _data = {
     options: [
@@ -216,6 +356,8 @@ export function createData(store) {
       { class: "btn-active", text: "active" },
       { disabled: true, text: "disabled" },
     ],
+
+    toggleSwitchState: true,
 
     navItems: ["latest", "categories", "top"].map((name) => {
       let item = NavItem.fromText(name);
@@ -244,15 +386,19 @@ export function createData(store) {
     soon: moment().add(2, "days"),
 
     transformedPost,
+    postModel,
+    postList,
 
     user,
 
     userWithUnread: createUser({
       unread_notifications: 3,
-      unread_private_messages: 7,
+      unread_high_priority_notifications: 7,
     }),
 
     lorem: cooked,
+    shortLorem:
+      "Lorem ipsum dolor sit amet, et nec quis viderer prompta, ex omnium ponderum insolens eos, sed discere invenire principes in. Fuisset constituto per ad. Est no scripta propriae facilisis, viderer impedit deserunt in mel. Quot debet facilisis ne vix, nam in detracto tacimates. At quidam petentium vulputate pro. Alia iudico repudiandae ad vel, erat omnis epicuri eos id. Et illum dolor graeci vel, quo feugiat consulatu ei.",
 
     topicTimerUpdateDate: "2017-10-18 18:00",
 
@@ -269,6 +415,10 @@ export function createData(store) {
     settings: "bold|italic|strike|underline",
 
     colors: "f49|c89|564897",
+
+    charCounterContent: "",
+
+    selectedTags: ["apple", "orange", "potato"],
   };
 
   return _data;

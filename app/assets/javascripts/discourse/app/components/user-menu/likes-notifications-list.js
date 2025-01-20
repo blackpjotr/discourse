@@ -5,7 +5,11 @@ export default class UserMenuLikesNotificationsList extends UserMenuNotification
     return this.filterByTypes;
   }
 
-  dismissWarningModal() {
-    return null;
+  get renderDismissConfirmation() {
+    return false;
+  }
+
+  get emptyStateComponent() {
+    return "user-menu/likes-list-empty-state";
   }
 }

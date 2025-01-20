@@ -1,7 +1,10 @@
+import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
 
-export default DiscourseRoute.extend({
+export default class UserInvitedIndex extends DiscourseRoute {
+  @service router;
+
   beforeModel() {
-    this.replaceWith("userInvited.show", "pending");
-  },
-});
+    this.router.replaceWith("userInvited.show", "pending");
+  }
+}

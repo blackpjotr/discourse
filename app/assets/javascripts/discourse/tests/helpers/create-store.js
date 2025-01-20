@@ -1,26 +1,27 @@
-import KeyValueStore from "discourse/lib/key-value-store";
 import RestAdapter from "discourse/adapters/rest";
-import Store from "discourse/services/store";
 import TopicListAdapter from "discourse/adapters/topic-list";
-import TopicTrackingState from "discourse/models/topic-tracking-state";
-import { buildResolver } from "discourse-common/resolver";
-import { currentSettings } from "discourse/tests/helpers/site-settings";
-import Site from "discourse/models/site";
+import deprecated from "discourse/lib/deprecated";
+import KeyValueStore from "discourse/lib/key-value-store";
 import RestModel from "discourse/models/rest";
+import Site from "discourse/models/site";
+import TopicTrackingState from "discourse/models/topic-tracking-state";
+import { buildResolver } from "discourse/resolver";
+import Store from "discourse/services/store";
+import { currentSettings } from "discourse/tests/helpers/site-settings";
 
-const CatAdapter = RestAdapter.extend({
-  primaryKey: "cat_id",
-});
+class CatAdapter extends RestAdapter {
+  primaryKey = "cat_id";
+}
 
-const CachedCatAdapter = RestAdapter.extend({
-  primaryKey: "cat_id",
-  cache: true,
+class CachedCatAdapter extends RestAdapter {
+  primaryKey = "cat_id";
+  cache = true;
   apiNameFor() {
     return "cat";
-  },
-});
+  }
+}
 
-const CachedCat = RestModel.extend({
+class CachedCat extends RestModel {
   init(...args) {
     // Simulate an implicit injection
     Object.defineProperty(this, "injectedProperty", {
@@ -28,11 +29,22 @@ const CachedCat = RestModel.extend({
       enumerable: true,
       value: "hello world",
     });
-    this._super(...args);
-  },
-});
+    return super.init(...args);
+  }
+}
 
 export default function (customLookup = () => {}) {
+  deprecated(
+    `create-store helper is deprecated. Please use regular Store service instead, e.g.
+    \`getOwner(this).lookup("service:store")\`
+  `,
+    {
+      since: "2.9.0.beta12",
+      dropFrom: "3.1.0.beta1",
+      id: "discourse.create-store-helper",
+    }
+  );
+
   const resolver = buildResolver("discourse").create({
     namespace: { modulePrefix: "discourse" },
   });

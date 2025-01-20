@@ -1,10 +1,10 @@
+import { getOwner } from "@ember/owner";
+import { render } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { render } from "@ember/test-helpers";
-import I18n from "I18n";
-import createStore from "discourse/tests/helpers/create-store";
-import { hbs } from "ember-cli-htmlbars";
 import selectKit from "discourse/tests/helpers/select-kit-helper";
+import I18n from "discourse-i18n";
 
 module(
   "Integration | Component | select-kit/category-chooser",
@@ -40,7 +40,7 @@ module(
 
       await this.subject.expand();
 
-      assert.notOk(this.subject.rowByValue(2).exists());
+      assert.false(this.subject.rowByValue(2).exists());
     });
 
     test("with scopedCategoryId", async function (assert) {
@@ -112,6 +112,40 @@ module(
 
     test("with allowUncategorized=null", async function (assert) {
       this.siteSettings.allow_uncategorized_topics = false;
+
+      await render(hbs`
+        <CategoryChooser
+          @value={{this.value}}
+          @options={{hash
+            allowUncategorized=null
+          }}
+        />
+      `);
+
+      assert.strictEqual(this.subject.header().value(), null);
+      assert.strictEqual(this.subject.header().label(), "category…");
+    });
+
+    test("with allowUncategorized=null and defaultComposerCategory present", async function (assert) {
+      this.siteSettings.allow_uncategorized_topics = false;
+      this.siteSettings.default_composer_category = 4;
+
+      await render(hbs`
+        <CategoryChooser
+          @value={{this.value}}
+          @options={{hash
+            allowUncategorized=null
+          }}
+        />
+      `);
+
+      assert.strictEqual(this.subject.header().value(), null);
+      assert.strictEqual(this.subject.header().label(), "");
+    });
+
+    test("with allowUncategorized=null and defaultComposerCategory present, but not set", async function (assert) {
+      this.siteSettings.allow_uncategorized_topics = false;
+      this.siteSettings.default_composer_category = -1;
 
       await render(hbs`
         <CategoryChooser
@@ -233,7 +267,7 @@ module(
     });
 
     test("filter works with non english characters", async function (assert) {
-      const store = createStore();
+      const store = getOwner(this).lookup("service:store");
       store.createRecord("category", {
         id: 1,
         name: "chữ Quốc ngữ",
@@ -253,7 +287,7 @@ module(
     });
 
     test("decodes entities in row title", async function (assert) {
-      const store = createStore();
+      const store = getOwner(this).lookup("service:store");
       store.createRecord("category", {
         id: 1,
         name: "cat-with-entities",
@@ -269,11 +303,9 @@ module(
 
       await this.subject.expand();
 
-      assert.strictEqual(
-        this.subject.rowByIndex(0).el().querySelector(".category-desc")
-          .innerText,
-        'baz "bar ‘foo’'
-      );
+      assert
+        .dom(".category-desc", this.subject.rowByIndex(0).el())
+        .hasText('baz "bar ‘foo’');
     });
   }
 );

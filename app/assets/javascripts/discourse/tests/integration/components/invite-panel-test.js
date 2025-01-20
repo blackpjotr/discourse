@@ -1,11 +1,10 @@
+import { getOwner } from "@ember/owner";
+import { click, render } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { click, render } from "@ember/test-helpers";
-import { exists, query } from "discourse/tests/helpers/qunit-helpers";
-import { hbs } from "ember-cli-htmlbars";
 import pretender, { response } from "discourse/tests/helpers/create-pretender";
 import selectKit from "discourse/tests/helpers/select-kit-helper";
-import User from "discourse/models/user";
 
 module("Integration | Component | invite-panel", function (hooks) {
   setupRenderingTest(hooks);
@@ -19,24 +18,23 @@ module("Integration | Component | invite-panel", function (hooks) {
       })
     );
 
-    this.currentUser.set("details", { can_invite_via_email: true });
-    this.set("panel", {
-      id: "invite",
-      model: { inviteModel: User.create(this.currentUser) },
+    const store = getOwner(this).lookup("service:store");
+    const user = store.createRecord("user", {
+      details: { can_invite_via_email: true },
     });
+    this.set("inviteModel", user);
 
-    await render(hbs`<InvitePanel @panel={{this.panel}} />`);
+    await render(hbs`<InvitePanel @inviteModel={{this.inviteModel}} />`);
 
     const input = selectKit(".invite-user-input");
     await input.expand();
     await input.fillInFilter("eviltrout@example.com");
     await input.selectRowByValue("eviltrout@example.com");
-    assert.ok(!exists(".send-invite:disabled"));
+    assert.dom(".send-invite").isEnabled();
 
     await click(".generate-invite-link");
-    assert.strictEqual(
-      query(".invite-link-input").value,
-      "http://example.com/invites/92c297e886a0ca03089a109ccd6be155"
-    );
+    assert
+      .dom(".invite-link-input")
+      .hasValue("http://example.com/invites/92c297e886a0ca03089a109ccd6be155");
   });
 });

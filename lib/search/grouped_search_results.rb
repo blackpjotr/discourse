@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require 'sanitize'
+require "sanitize"
 
 class Search
-
   class GroupedSearchResults
     include ActiveModel::Serialization
 
@@ -15,6 +14,7 @@ class Search
       :type_filter,
       :posts,
       :categories,
+      :extra_categories,
       :users,
       :tags,
       :groups,
@@ -24,14 +24,25 @@ class Search
       :term,
       :search_context,
       :more_full_page_results,
-      :error
+      :error,
+      :use_pg_headlines_for_excerpt,
+      :can_lazy_load_categories,
     )
 
     attr_accessor :search_log_id
 
     BLURB_LENGTH = 200
 
-    def initialize(type_filter:, term:, search_context:, blurb_length: nil, blurb_term: nil, is_header_search: false)
+    def initialize(
+      type_filter:,
+      term:,
+      search_context:,
+      blurb_length: nil,
+      blurb_term: nil,
+      is_header_search: false,
+      use_pg_headlines_for_excerpt: SiteSetting.use_pg_headlines_for_excerpt,
+      can_lazy_load_categories: false
+    )
       @type_filter = type_filter
       @term = term
       @blurb_term = blurb_term || term
@@ -39,11 +50,14 @@ class Search
       @blurb_length = blurb_length || BLURB_LENGTH
       @posts = []
       @categories = []
+      @extra_categories = Set.new
       @users = []
       @tags = []
       @groups = []
       @error = nil
       @is_header_search = is_header_search
+      @use_pg_headlines_for_excerpt = use_pg_headlines_for_excerpt
+      @can_lazy_load_categories = can_lazy_load_categories
     end
 
     def error=(error)
@@ -58,20 +72,21 @@ class Search
       end
     end
 
-    OMISSION = '...'
-    SCRUB_HEADLINE_REGEXP = /<span(?: \w+="[^"]+")* class="#{Search::HIGHLIGHT_CSS_CLASS}"(?: \w+="[^"]+")*>([^<]*)<\/span>/
+    OMISSION = "..."
+    SCRUB_HEADLINE_REGEXP =
+      %r{<span(?: \w+="[^"]+")* class="#{Search::HIGHLIGHT_CSS_CLASS}"(?: \w+="[^"]+")*>([^<]*)</span>}
 
     def blurb(post)
-      opts = {
-        term: @blurb_term,
-        blurb_length: @blurb_length
-      }
+      opts = { term: @blurb_term, blurb_length: @blurb_length }
+      post_search_data_version = post&.post_search_data&.version
 
-      if post.post_search_data.version > SearchIndexer::MIN_POST_REINDEX_VERSION && !Search.segment_chinese? && !Search.segment_japanese?
-        if SiteSetting.use_pg_headlines_for_excerpt
+      if post_search_data_version.present? &&
+           post_search_data_version >= SearchIndexer::MIN_POST_BLURB_INDEX_VERSION &&
+           !Search.segment_chinese? && !Search.segment_japanese?
+        if use_pg_headlines_for_excerpt
           scrubbed_headline = post.headline.gsub(SCRUB_HEADLINE_REGEXP, '\1')
-          prefix_omission = scrubbed_headline.start_with?(post.leading_raw_data) ? '' : OMISSION
-          postfix_omission = scrubbed_headline.end_with?(post.trailing_raw_data) ? '' : OMISSION
+          prefix_omission = scrubbed_headline.start_with?(post.leading_raw_data) ? "" : OMISSION
+          postfix_omission = scrubbed_headline.end_with?(post.trailing_raw_data) ? "" : OMISSION
           return "#{prefix_omission}#{post.headline}#{postfix_omission}"
         else
           opts[:cooked] = post.post_search_data.raw_data
@@ -92,6 +107,21 @@ class Search
         instance_variable_set("@more_#{type}".to_sym, true)
       else
         (self.public_send(type)) << object
+      end
+
+      if can_lazy_load_categories
+        category =
+          case type
+          when "posts"
+            object.topic.category
+          when "topics"
+            object.category
+          end
+
+        if category
+          extra_categories << category.parent_category if category.parent_category
+          extra_categories << category
+        end
       end
     end
 
@@ -117,18 +147,13 @@ class Search
       end
 
       if term
-        if term =~ Regexp.new(Search::PHRASE_MATCH_REGEXP_PATTERN)
-          term = Regexp.last_match[1]
-        end
+        term = Regexp.last_match[1] if term =~ Regexp.new(Search::PHRASE_MATCH_REGEXP_PATTERN)
 
-        blurb = TextHelper.excerpt(cooked, term,
-          radius: blurb_length / 2
-        )
+        blurb = TextHelper.excerpt(cooked, term, radius: blurb_length / 2)
       end
 
       blurb = TextHelper.truncate(cooked, length: blurb_length) if blurb.blank?
       Sanitize.clean(blurb)
     end
   end
-
 end

@@ -1,4 +1,3 @@
-import domFromString from "discourse-common/lib/dom-from-string";
 import {
   failedCache,
   lookupCache,
@@ -8,7 +7,8 @@ import {
   setFailedCache,
   setLocalCache,
 } from "pretty-text/oneboxer-cache";
-import discourseLater from "discourse-common/lib/later";
+import domFromString from "discourse/lib/dom-from-string";
+import discourseLater from "discourse/lib/later";
 
 let timeout;
 const loadingQueue = [];

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe PostReply do
-  fab!(:topic) { Fabricate(:topic) }
+  fab!(:topic)
   fab!(:post) { Fabricate(:post, topic: topic) }
   fab!(:other_post) { Fabricate(:post, topic: topic) }
 
@@ -17,7 +17,7 @@ RSpec.describe PostReply do
       expect(post_reply).to_not be_valid
 
       expect(post_reply.errors[:base]).to include(
-        I18n.t("activerecord.errors.models.post_reply.base.different_topic")
+        I18n.t("activerecord.errors.models.post_reply.base.different_topic"),
       )
     end
   end

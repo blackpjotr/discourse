@@ -8,7 +8,7 @@
 }
 
 .dialog-container {
-  z-index: z("modal", "overlay");
+  z-index: z("modal", "dialog");
   display: flex;
 }
 
@@ -25,9 +25,13 @@
     opacity: 0;
   }
 }
+
 .dialog-overlay {
   background: rgba(var(--always-black-rgb), 0.65);
   animation: fade-in 250ms both;
+  @media (prefers-reduced-motion) {
+    animation-duration: 0s;
+  }
 }
 
 .dialog-content {
@@ -35,14 +39,18 @@
   z-index: z("modal", "content");
   position: relative;
   background-color: var(--secondary);
-  animation: fade-in 250ms both;
-  box-shadow: shadow("card");
+  box-shadow: var(--shadow-card);
   min-width: 40vw;
+  animation: fade-in 250ms both;
+  @media (prefers-reduced-motion) {
+    animation-duration: 0s;
+  }
 }
 
 .dialog-body {
   overflow-y: auto;
   max-height: 400px;
+  max-width: 800px;
   padding: 1em;
 }
 
@@ -60,6 +68,7 @@
   .dialog-close {
     margin-left: auto;
     flex-basis: content;
+    padding-left: 15px;
     .d-icon {
       color: var(--primary-high);
     }

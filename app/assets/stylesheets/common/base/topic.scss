@@ -1,5 +1,3 @@
-$topic-progress-height: 42px;
-
 @keyframes button-jump-up {
   0% {
     margin-bottom: -60px;
@@ -18,7 +16,7 @@ $topic-progress-height: 42px;
   }
 }
 
-[class*="archetype-"] {
+#main-outlet {
   --below-topic-margin: 0.75em;
 }
 
@@ -42,6 +40,10 @@ $topic-progress-height: 42px;
     Without this those themes would render topics unreadable. */
   }
 
+  .topic-navigation {
+    overflow-anchor: none;
+  }
+
   // timeline
   @media screen and (min-width: 925px) {
     // at 925px viewport width and above the timeline is visible (see topic-navigation.js)
@@ -50,9 +52,6 @@ $topic-progress-height: 42px;
       align-self: start;
       @include sticky;
       top: calc(var(--header-offset, 60px) + 2em);
-      .footer-nav-ipad & {
-        top: calc(var(--header-offset, 60px) + var(--footer-nav-height) + 2em);
-      }
       margin-left: 1em;
       z-index: z("timeline");
 
@@ -72,15 +71,15 @@ $topic-progress-height: 42px;
       overflow-y: auto;
       z-index: z("timeline");
       padding: 10px 10px 35px 10px;
-      box-shadow: shadow("dropdown");
+      box-shadow: var(--shadow-dropdown);
       background: var(--tertiary-low);
 
       .close {
         display: flex;
         align-items: center;
         position: absolute;
-        right: 10px;
-        top: 10px;
+        right: 0px;
+        top: 8px;
         color: var(--primary);
         opacity: 0.5;
         font-size: var(--font-up-1);
@@ -92,8 +91,11 @@ $topic-progress-height: 42px;
     grid-template-areas: "posts";
     grid-template-columns: auto;
     .topic-navigation {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
       grid-area: posts;
-      grid-row: 2;
+      grid-row: 3;
       width: auto;
     }
 
@@ -108,108 +110,16 @@ $topic-progress-height: 42px;
 
 .progress-back-container {
   z-index: z("dropdown");
-  margin-right: 0;
   animation-duration: 0.5s;
   animation-name: button-jump-up;
-  width: 145px;
   text-align: center;
   margin-bottom: 0px;
+  margin-right: 0.5em;
   position: absolute;
   right: 0;
-  top: -120%; // above parent container + some extra space
+  bottom: 100%; // above parent container + some extra space
   .btn {
     margin: 0;
-  }
-}
-
-#topic-progress-wrapper {
-  position: fixed;
-  bottom: 0px;
-  right: 10px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: flex-end;
-  z-index: z("timeline");
-  .topic-admin-menu-button-container {
-    display: flex;
-    > span {
-      display: flex;
-    }
-  }
-  .topic-admin-popup-menu.right-side {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    left: auto;
-    transition: bottom 0.5s;
-    transform: translateZ(
-      0
-    ); // iOS11 Rendering bug https://meta.discourse.org/t/wrench-menu-not-disappearing-on-ios/94297
-  }
-
-  &.docked {
-    position: initial;
-    .topic-admin-popup-menu.right-side {
-      bottom: -150px; // Prevents menu from being too high when a topic is very short
-    }
-  }
-
-  body:not(.footer-nav-visible) & {
-    bottom: env(safe-area-inset-bottom);
-  }
-
-  &:not(.docked) {
-    @media screen and (min-width: $reply-area-max-width) {
-      // position to right side of composer
-      right: calc(50% + 10px);
-      margin-right: calc(#{$reply-area-max-width} / 2 * -1);
-    }
-  }
-
-  &.with-transitions {
-    transition: bottom 0.2s, margin-bottom 0.2s;
-
-    #topic-progress .bg {
-      transition: width 0.5s;
-    }
-  }
-}
-
-#topic-progress {
-  position: relative;
-  background-color: var(--secondary);
-  color: var(--tertiary);
-  border: 1px solid var(--tertiary-low);
-  width: 145px;
-  height: $topic-progress-height;
-
-  /* as a big ol' click target, don't let text inside be selected */
-  @include unselectable;
-
-  .nums {
-    position: relative;
-    top: 12px;
-    width: 100%;
-    text-align: center;
-    z-index: z("base");
-  }
-  h4 {
-    display: inline;
-    font-size: $font-up-2;
-    line-height: $line-height-small;
-  }
-  .d-icon {
-    position: absolute;
-    right: 8px;
-    bottom: 9px;
-    z-index: z("base");
-  }
-  .bg {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--progress-bg-width, 0);
-    background-color: var(--tertiary-low);
   }
 }
 
@@ -217,12 +127,15 @@ $topic-progress-height: 42px;
 .topic-timer-info {
   border-top: 1px solid var(--primary-low);
   margin: 0;
-  max-width: 758px;
+  max-width: calc(
+    var(--topic-body-width) + (var(--topic-body-width-padding) * 2) +
+      var(--topic-avatar-width)
+  );
   &:empty {
     padding: 0;
   }
   span .d-icon {
-    font-size: $font-down-1;
+    font-size: var(--font-down-1);
   }
   .topic-timer-heading,
   .slow-mode-heading {
@@ -238,7 +151,7 @@ $topic-progress-height: 42px;
     align-self: flex-start;
   }
   button {
-    font-size: $font-down-2;
+    font-size: var(--font-down-2);
     background: transparent;
   }
 }
@@ -246,12 +159,6 @@ $topic-progress-height: 42px;
 .title-wrapper {
   display: flex;
   flex-wrap: wrap;
-  button {
-    margin: 0 0.5em 0 0;
-  }
-  a.topic-featured-link {
-    display: inline-block;
-  }
   .topic-statuses {
     line-height: 1.2;
     .d-icon {
@@ -264,26 +171,19 @@ $topic-progress-height: 42px;
   }
 }
 
-a.badge-category {
-  margin-top: 5px;
-}
-
 #topic-title {
   .title-wrapper {
     display: flex;
     flex-wrap: wrap;
-    width: 90%;
-    a.topic-featured-link {
-      display: inline-block;
+    @media screen and (min-width: 925px) {
+      width: 90%; // topic title isn't full-width on wide screens
     }
   }
   h1 {
     margin-bottom: 0;
     width: 100%;
   }
-  a.badge-category {
-    margin-top: 5px;
-  }
+
   a.edit-topic .d-icon {
     font-size: 0.8em;
   }
@@ -291,27 +191,65 @@ a.badge-category {
     display: flex;
     flex-wrap: wrap;
     box-sizing: border-box;
-    max-width: 758px;
-    #edit-title {
-      flex: 1 1 auto;
-    }
-    .category-chooser,
-    .mini-tag-chooser {
-      flex: 1 1 49%;
-      margin: 0 0 9px 0;
-      @media all and (max-width: 500px) {
-        flex: 1 1 100%;
-      }
-    }
-    .mini-tag-chooser {
-      margin-left: 2%;
-      @media all and (max-width: 500px) {
-        margin-left: 0;
-      }
-    }
+    gap: 0.5em;
+    width: 100%;
+    max-width: calc(
+      var(--topic-body-width) + (var(--topic-body-width-padding) * 2) +
+        var(--topic-avatar-width)
+    );
     .select-kit .category-row {
       max-width: unset;
     }
+  }
+
+  .edit-title__wrapper {
+    flex: 1 1 100%;
+    #edit-title {
+      width: 100%;
+      margin: 0;
+    }
+  }
+
+  .edit-category__wrapper {
+    flex: 1 1 5%;
+    @include breakpoint(tablet) {
+      min-width: 0; // allows category name to shrink to fit narrow screens
+    }
+    .select-kit.combo-box.category-chooser {
+      width: 100%;
+    }
+  }
+
+  .edit-tags__wrapper {
+    flex: 1 1 33%;
+    @include breakpoint(tablet) {
+      flex: 1 1 100%; // force full row on narrow screens
+    }
+
+    .mini-tag-chooser {
+      width: 100%;
+    }
+    .select-kit-header--filter {
+      flex-wrap: nowrap; // forces the whole input to wrap if needed, rather than individual tags
+      min-width: 0;
+      @include breakpoint(tablet) {
+        flex-wrap: wrap; // individual tags will need to wrap on narrow screens
+      }
+      button {
+        min-width: 0;
+      }
+    }
+
+    .multi-select-filter {
+      flex-shrink: 0;
+      min-width: 2em; // always provide a minimal space for input
+    }
+  }
+
+  .edit-controls {
+    display: flex;
+    width: 100%;
+    gap: 0.5em;
   }
 }
 
@@ -321,16 +259,21 @@ a.badge-category {
 }
 
 .private_message {
+  background: var(--d-content-background);
   #topic-title {
     .edit-topic-title {
       position: relative;
+      min-width: 0;
       .private-message-glyph {
         position: absolute;
+        z-index: 1;
         left: 0.75em;
-        top: 7px;
+        top: 1.2em;
+        .mobile-view & {
+          top: 1.1em;
+        }
       }
       #edit-title {
-        width: calc(100% - 50px);
         padding-left: 2.25em;
       }
       .mini-tag-chooser {
@@ -354,47 +297,9 @@ a.badge-category {
   justify-content: space-between;
 
   padding: 0.5em;
-  background-color: var(--highlight-medium);
+  background-color: var(--highlight-bg);
   margin-top: 1em;
   max-width: 757px;
-}
-
-.suggested-topics-wrapper.related-messages-wrapper {
-  .suggested-topics:nth-of-type(n + 2) {
-    thead {
-      display: none;
-    }
-  }
-}
-
-// Target the .badge-category text, the bullet icon needs to maintain `display: block`
-.suggested-topics h3 .badge-wrapper.bullet span.badge-category,
-.suggested-topics h3 .badge-wrapper.box span,
-.suggested-topics h3 .badge-wrapper.bar span {
-  display: inline;
-}
-
-.suggested-topics h3 .badge-wrapper.bullet span.badge-category {
-  // Override vertical-align: text-top from `badges.css.scss`
-  vertical-align: baseline;
-  line-height: $line-height-medium;
-}
-
-.suggested-topics h3 .badge-wrapper.bullet,
-.suggested-topics h3 .badge-wrapper.bullet span.badge-category-parent-bg,
-.suggested-topics h3 .badge-wrapper.bullet span.badge-category-bg {
-  // Top of bullet aligns with top of line - adjust line height to vertically align bullet.
-  line-height: 0.8;
-}
-
-.suggested-topics .badge-wrapper.bullet span.badge-category,
-.suggested-topics .badge-wrapper.bar span.badge-category {
-  max-width: 150px;
-}
-
-.suggested-topics .suggested-topics-title {
-  display: flex;
-  align-items: center;
 }
 
 .post-links-container {
@@ -426,12 +331,8 @@ a.badge-category {
       a[href] {
         color: var(--primary-med-or-secondary-med);
       }
-      .clicks {
-        margin-left: 0.5em;
-        flex: 0 0 auto;
-      }
       .d-icon {
-        font-size: $font-down-2;
+        font-size: var(--font-down-2);
         margin: 0 0.5em 0 0;
       }
     }
@@ -452,20 +353,22 @@ a.badge-category {
 }
 
 a.topic-featured-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   text-transform: lowercase;
   color: var(--primary-med-or-secondary-med);
   font-size: 0.875rem;
   .d-icon {
-    margin-right: 3px;
+    font-size: var(--font-down-1);
+    margin-right: 0.25em;
   }
 }
 
 .topic-area {
   .pending-posts {
     max-width: calc(
-      #{$topic-body-width} + #{$topic-avatar-width} + #{$topic-body-width-padding *
-        2}
+      var(--topic-body-width) + (var(--topic-body-width-padding) * 2) +
+        var(--topic-avatar-width)
     );
     .reviewable-item {
       .post-body {
@@ -480,17 +383,21 @@ a.topic-featured-link {
   justify-content: space-between;
   padding-bottom: 1em;
   max-width: calc(
-    #{$topic-body-width} + #{$topic-avatar-width} + #{$topic-body-width-padding *
-      2}
+    var(--topic-body-width) + (var(--topic-body-width-padding) * 2) +
+      var(--topic-avatar-width)
   );
   align-items: center;
 
   .is-public {
     padding: 0.25em 0.5em;
-    font-size: $font-down-2;
+    font-size: var(--font-down-2);
     background: var(--tertiary);
     color: var(--secondary);
     border-radius: 3px;
     text-transform: lowercase;
   }
+}
+
+a[data-clicks]::after {
+  @include click-counter-badge;
 }

@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 RSpec.describe InlineUploads do
-  before do
-    set_cdn_url "https://awesome.com"
-  end
+  before { set_cdn_url "https://awesome.com" }
 
-  describe '.process' do
-    context 'with local uploads' do
-      fab!(:upload) { Fabricate(:upload) }
+  describe ".process" do
+    context "with local uploads" do
+      fab!(:upload)
       fab!(:upload2) { Fabricate(:upload) }
       fab!(:upload3) { Fabricate(:upload) }
 
@@ -50,9 +48,7 @@ RSpec.describe InlineUploads do
 
         This is an invalid `<img ...>` tag
         MD
-      end
 
-      it "should work with invalid img tags" do
         md = '<img data-id="<>">'
         expect(InlineUploads.process(md)).to eq(md)
       end
@@ -250,9 +246,7 @@ RSpec.describe InlineUploads do
       end
 
       context "with subfolder" do
-        before do
-          set_subfolder "/community"
-        end
+        before { set_subfolder "/community" }
 
         it "should correct subfolder images" do
           md = <<~MD
@@ -389,8 +383,20 @@ RSpec.describe InlineUploads do
         MD
       end
 
+      it "should not replace identical markdown in code blocks", skip: "Known issue" do
+        md = <<~MD
+        `![image|690x290](#{upload.url})`
+        ![image|690x290](#{upload.url})
+        MD
+
+        expect(InlineUploads.process(md)).to eq(<<~MD)
+        `![image|690x290](#{upload.url})`
+        ![image|690x290](#{upload.short_url})
+        MD
+      end
+
       it "should not be affected by an emoji" do
-        CustomEmoji.create!(name: 'test', upload: upload3)
+        CustomEmoji.create!(name: "test", upload: upload3)
         Emoji.clear_cache
 
         md = <<~MD
@@ -429,9 +435,12 @@ RSpec.describe InlineUploads do
                         </a>
         MD
 
-        md = "<h1></h1>\r\n<a href=\"http://somelink.com\">\r\n        <img src=\"#{upload.url}\" alt=\"test\" width=\"500\" height=\"500\">\r\n</a>"
+        md =
+          "<h1></h1>\r\n<a href=\"http://somelink.com\">\r\n        <img src=\"#{upload.url}\" alt=\"test\" width=\"500\" height=\"500\">\r\n</a>"
 
-        expect(InlineUploads.process(md)).to eq("<h1></h1>\r\n<a href=\"http://somelink.com\">\r\n        <img src=\"#{upload.short_url}\" alt=\"test\" width=\"500\" height=\"500\">\r\n</a>")
+        expect(InlineUploads.process(md)).to eq(
+          "<h1></h1>\r\n<a href=\"http://somelink.com\">\r\n        <img src=\"#{upload.short_url}\" alt=\"test\" width=\"500\" height=\"500\">\r\n</a>",
+        )
       end
 
       it "should correctly update image sources within anchor or paragraph tags" do
@@ -592,7 +601,7 @@ RSpec.describe InlineUploads do
         MD
       end
 
-      it 'should correct full upload url to the shorter version' do
+      it "should correct full upload url to the shorter version" do
         md = <<~MD
         Some random text
 
@@ -634,7 +643,7 @@ RSpec.describe InlineUploads do
         MD
       end
 
-      it 'accepts a block that yields when link does not match an upload in the db' do
+      it "accepts a block that yields when link does not match an upload in the db" do
         url = "#{Discourse.base_url}#{upload.url}"
 
         md = <<~MD
@@ -644,9 +653,7 @@ RSpec.describe InlineUploads do
 
         upload.destroy!
 
-        InlineUploads.process(md, on_missing: lambda { |link|
-          expect(link).to eq(url)
-        })
+        InlineUploads.process(md, on_missing: lambda { |link| expect(link).to eq(url) })
       end
     end
 
@@ -666,7 +673,7 @@ RSpec.describe InlineUploads do
         #{upload.url}
         <img src="#{upload.url}" alt="some image">
         test<img src="#{upload2.url}" alt="some image">test
-        <img src="#{URI.join(SiteSetting.s3_cdn_url, URI.parse(upload2.url).path).to_s}" alt="some image">
+        <img src="#{URI.join(SiteSetting.s3_cdn_url, URI.parse(upload2.url).path)}" alt="some image">
         MD
 
         expect(InlineUploads.process(md)).to eq(<<~MD)

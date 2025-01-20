@@ -1,10 +1,10 @@
+import { render } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { render } from "@ember/test-helpers";
 import selectKit, {
   setDefaultState,
 } from "discourse/tests/helpers/select-kit-helper";
-import { hbs } from "ember-cli-htmlbars";
 
 module(
   "Integration | Component | select-kit/notifications-button",
@@ -29,21 +29,19 @@ module(
         />
       `);
 
-      assert.ok(this.subject.header().value());
+      assert.true(!!this.subject.header().value());
 
-      assert.ok(
+      assert.true(
         this.subject
           .header()
           .label()
           .includes(`${this.i18nPrefix}.regular${this.i18nPostfix}`),
-        "it shows the regular choice when value is not set"
+        "shows the regular choice when value is not set"
       );
 
-      const icon = this.subject.header().icon();
-      assert.ok(
-        icon.classList.contains("d-icon-d-regular"),
-        "it shows the correct icon"
-      );
+      assert
+        .dom(this.subject.header().icon())
+        .hasClass("d-icon-d-regular", "shows the correct icon");
     });
   }
 );

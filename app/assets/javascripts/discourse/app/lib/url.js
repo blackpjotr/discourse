@@ -1,15 +1,16 @@
-import getURL, { withoutPrefix } from "discourse-common/lib/get-url";
-import { next, schedule } from "@ember/runloop";
-import Category from "discourse/models/category";
+/* eslint-disable ember/no-private-routing-service */
 import EmberObject from "@ember/object";
-import LockOn from "discourse/lib/lock-on";
-import Session from "discourse/models/session";
-import User from "discourse/models/user";
-import { defaultHomepage } from "discourse/lib/utilities";
+import { setOwner } from "@ember/owner";
+import { next, schedule } from "@ember/runloop";
 import { isEmpty } from "@ember/utils";
+import $ from "jquery";
+import { isTesting } from "discourse/lib/environment";
+import getURL, { withoutPrefix } from "discourse/lib/get-url";
+import LockOn from "discourse/lib/lock-on";
 import offsetCalculator from "discourse/lib/offset-calculator";
-import { setOwner } from "@ember/application";
-import { isTesting } from "discourse-common/config/environment";
+import { defaultHomepage } from "discourse/lib/utilities";
+import Category from "discourse/models/category";
+import Session from "discourse/models/session";
 
 const rewrites = [];
 export const TOPIC_URL_REGEXP = /\/t\/([^\/]*[^\d\/][^\/]*)\/(\d+)\/?(\d+)?/;
@@ -19,6 +20,7 @@ const SERVER_SIDE_ONLY = [
   /^\/assets\//,
   /^\/uploads\//,
   /^\/secure-media-uploads\//,
+  /^\/secure-uploads\//,
   /^\/stylesheets\//,
   /^\/site_customizations\//,
   /^\/raw\//,
@@ -26,7 +28,6 @@ const SERVER_SIDE_ONLY = [
   /^\/raw\/\d+/,
   /\.rss$/,
   /\.json$/,
-  /^\/admin\/upgrade$/,
   /^\/logs($|\/)/,
   /^\/admin\/customize\/watched_words\/action\/[^\/]+\/download$/,
   /^\/pub\//,
@@ -38,6 +39,9 @@ const SERVER_SIDE_ONLY = [
 // that we show a little bit of the post text even on mobile devices instead of
 // scrolling to "suggested topics".
 const JUMP_END_BUFFER = 250;
+
+const ALLOWED_CANONICAL_PARAMS = ["page"];
+const TRAILING_SLASH_REGEX = /\/$/;
 
 export function rewritePath(path) {
   const params = path.split("?");
@@ -73,33 +77,10 @@ let _jumpScheduled = false;
 let _transitioning = false;
 let lockOn = null;
 
-export function jumpToElement(elementId) {
-  if (_jumpScheduled || isEmpty(elementId)) {
-    return;
-  }
-
-  const selector = `#main #${elementId}, a[name=${elementId}]`;
-  _jumpScheduled = true;
-
-  schedule("afterRender", function () {
-    if (lockOn) {
-      lockOn.clearLock();
-    }
-
-    lockOn = new LockOn(selector, {
-      finished() {
-        _jumpScheduled = false;
-        lockOn = null;
-      },
-    });
-    lockOn.lock();
-  });
-}
-
-const DiscourseURL = EmberObject.extend({
+class DiscourseURL extends EmberObject {
   isJumpScheduled() {
     return _transitioning || _jumpScheduled;
-  },
+  }
 
   // Jumps to a particular post in the stream
   jumpToPost(postNumber, opts) {
@@ -175,10 +156,16 @@ const DiscourseURL = EmberObject.extend({
         return;
       }
     });
-  },
+  }
 
   replaceState(path) {
-    if (this.router.currentURL !== path) {
+    if (path.startsWith("#")) {
+      path = this.routerService.currentURL.replace(/#.*$/, "") + path;
+    }
+
+    path = withoutPrefix(path);
+
+    if (this.routerService.currentURL !== path) {
       // Always use replaceState in the next runloop to prevent weird routes changing
       // while URLs are loading. For example, while a topic loads it sets `currentPost`
       // which triggers a replaceState even though the topic hasn't fully loaded yet!
@@ -188,7 +175,12 @@ const DiscourseURL = EmberObject.extend({
         this.router._routerMicrolib.replaceURL(path);
       });
     }
-  },
+  }
+
+  pushState(path) {
+    path = withoutPrefix(path);
+    this.router._routerMicrolib.updateURL(path);
+  }
 
   routeToTag(a) {
     // skip when we are provided nowhere to route to
@@ -202,7 +194,7 @@ const DiscourseURL = EmberObject.extend({
     }
 
     return this.routeTo(a.href);
-  },
+  }
 
   /**
     Our custom routeTo method is used to intelligently overwrite default routing
@@ -218,11 +210,11 @@ const DiscourseURL = EmberObject.extend({
       return;
     }
 
-    if (Session.currentProp("requiresRefresh")) {
+    if (Session.currentProp("requiresRefresh") && !this.isComposerOpen) {
       return this.redirectTo(path);
     }
 
-    const pathname = path.replace(/(https?\:)?\/\/[^\/]+/, "");
+    const pathname = path.replace(/^(https?\:)?\/\/[^\/]+/, "");
 
     if (!this.isInternal(path)) {
       return this.redirectTo(path);
@@ -237,35 +229,18 @@ const DiscourseURL = EmberObject.extend({
     // Scroll to the same page, different anchor
     const m = /^#(.+)$/.exec(path);
     if (m) {
-      jumpToElement(m[1]);
+      this.jumpToElement(m[1]);
       return this.replaceState(path);
     }
 
-    const oldPath = this.router.currentURL;
+    const oldPath = this.routerService.currentURL;
 
-    path = path.replace(/(https?\:)?\/\/[^\/]+/, "");
-
-    // Rewrite /my/* urls
-    let myPath = getURL("/my");
-    const fullPath = getURL(path);
-    if (fullPath.startsWith(myPath)) {
-      const currentUser = User.current();
-      if (currentUser) {
-        path = fullPath.replace(
-          myPath,
-          userPath(currentUser.get("username_lower"))
-        );
-      } else {
-        return this.redirectTo("/login-preferences");
-      }
-    }
+    path = path.replace(/^(https?\:)?\/\/[^\/]+/, "");
 
     // handle prefixes
     if (path.startsWith("/")) {
       path = withoutPrefix(path);
     }
-
-    path = rewritePath(path);
 
     if (typeof opts.afterRouteComplete === "function") {
       schedule("afterRender", opts.afterRouteComplete);
@@ -275,15 +250,9 @@ const DiscourseURL = EmberObject.extend({
       return;
     }
 
-    if (oldPath === path) {
-      // If navigating to the same path send an app event.
-      // Views can watch it and tell their controllers to refresh
-      this.appEvents.trigger("url:refresh");
-    }
-
-    // TODO: Extract into rules we can inject into the URL handler
-    if (this.navigatedToHome(oldPath, path, opts)) {
-      return;
+    if (oldPath === path || this.refreshedHomepage(oldPath, path)) {
+      // If navigating to the same path, refresh the route
+      this.routerService.refresh();
     }
 
     // Navigating to empty string is the same as root
@@ -292,15 +261,15 @@ const DiscourseURL = EmberObject.extend({
     }
 
     return this.handleURL(path, opts);
-  },
+  }
 
   routeToUrl(url, opts = {}) {
     this.routeTo(getURL(url), opts);
-  },
+  }
 
   rewrite(regexp, replacement, opts) {
     rewrites.push({ regexp, replacement, opts: opts || {} });
-  },
+  }
 
   redirectAbsolute(url) {
     // Redirects will kill a test runner
@@ -309,36 +278,41 @@ const DiscourseURL = EmberObject.extend({
     }
     window.location = url;
     return true;
-  },
+  }
 
   redirectTo(url) {
     return this.redirectAbsolute(getURL(url));
-  },
+  }
 
   // Determines whether a URL is internal or not
   isInternal(url) {
-    if (url && url.length) {
-      if (url.startsWith("//")) {
-        url = "http:" + url;
-      }
-      if (url.startsWith("#")) {
-        return true;
-      }
-      if (url.startsWith("/")) {
-        return true;
-      }
-      if (url.startsWith(this.origin())) {
-        return true;
-      }
-      if (url.replace(/^http/, "https").startsWith(this.origin())) {
-        return true;
-      }
-      if (url.replace(/^https/, "http").startsWith(this.origin())) {
-        return true;
-      }
+    if (!url?.length) {
+      return false;
     }
-    return false;
-  },
+
+    if (url.startsWith("//")) {
+      url = "http:" + url;
+    }
+
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return (
+        url.startsWith(this.origin) ||
+        url.replace(/^http/, "https").startsWith(this.origin) ||
+        url.replace(/^https/, "http").startsWith(this.origin)
+      );
+    }
+
+    try {
+      const parsedUrl = new URL(url, this.origin);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+
+    return true;
+  }
 
   /**
     If the URL is in the topic form, /t/something/:topic_id/:post_number
@@ -399,7 +373,7 @@ const DiscourseURL = EmberObject.extend({
     }
 
     return false;
-  },
+  }
 
   /**
     @private
@@ -409,39 +383,40 @@ const DiscourseURL = EmberObject.extend({
     @param {String} oldPath the previous path we were on
     @param {String} path the path we're navigating to
   **/
-  navigatedToHome(oldPath, path) {
+  refreshedHomepage(oldPath, path) {
     const homepage = defaultHomepage();
 
-    if (
-      window.history &&
-      window.history.pushState &&
+    return (
       (path === "/" || path === "/" + homepage) &&
       (oldPath === "/" || oldPath === "/" + homepage)
-    ) {
-      this.appEvents.trigger("url:refresh");
-      return true;
-    }
-
-    return false;
-  },
+    );
+  }
 
   // This has been extracted so it can be tested.
-  origin() {
-    let prefix = getURL("/");
+  get origin() {
+    const prefix = getURL("/");
     return window.location.origin + (prefix === "/" ? "" : prefix);
-  },
+  }
+
+  get isComposerOpen() {
+    return this.container.lookup("service:composer")?.visible;
+  }
 
   get router() {
     return this.container.lookup("router:main");
-  },
+  }
+
+  get routerService() {
+    return this.container.lookup("service:router");
+  }
 
   get appEvents() {
     return this.container.lookup("service:app-events");
-  },
+  }
 
   controllerFor(name) {
     return this.container.lookup("controller:" + name);
-  },
+  }
 
   /**
     Be wary of looking up the router. In this case, we have links in our
@@ -449,8 +424,6 @@ const DiscourseURL = EmberObject.extend({
   **/
   handleURL(path, opts) {
     opts = opts || {};
-
-    const router = this.router;
 
     if (opts.replaceURL) {
       this.replaceState(path);
@@ -464,24 +437,44 @@ const DiscourseURL = EmberObject.extend({
       elementId = split[1];
     }
 
-    // The default path has a hack to allow `/` to default to defaultHomepage
-    // via BareRouter.handleUrl
-    let transition;
-    if (path === "/" || path.substring(0, 2) === "/?") {
-      router._routerMicrolib.updateURL(path);
-      transition = router.handleURL(path);
-    } else {
-      transition = router.transitionTo(path);
-    }
+    // Remove multiple consecutive slashes from path. Same as Ember does on initial page load:
+    // https://github.com/emberjs/ember.js/blob/8abcd000ee/packages/%40ember/routing/history-location.ts#L146
+    path = path.replaceAll(/\/\/+/g, "/");
+
+    const transition = this.routerService.transitionTo(path);
 
     transition._discourse_intercepted = true;
     transition._discourse_anchor = elementId;
     transition._discourse_original_url = path;
 
     const promise = transition.promise || transition;
-    promise.then(() => jumpToElement(elementId));
-  },
-});
+    return promise.then(() => this.jumpToElement(elementId));
+  }
+
+  jumpToElement(elementId) {
+    if (_jumpScheduled || isEmpty(elementId)) {
+      return;
+    }
+
+    const selector = `#main #${elementId}, a[name=${elementId}]`;
+    _jumpScheduled = true;
+
+    schedule("afterRender", function () {
+      if (lockOn) {
+        lockOn.clearLock();
+      }
+
+      lockOn = new LockOn(selector, {
+        finished() {
+          _jumpScheduled = false;
+          lockOn = null;
+        },
+      });
+      lockOn.lock();
+    });
+  }
+}
+
 let _urlInstance = DiscourseURL.create();
 
 export function setURLContainer(container) {
@@ -490,9 +483,21 @@ export function setURLContainer(container) {
 }
 
 export function prefixProtocol(url) {
-  return !url.includes("://") && !url.startsWith("mailto:")
-    ? "https://" + url
-    : url;
+  if (!url || typeof url !== "string") {
+    return url;
+  }
+
+  url = url.trim();
+
+  if (url.startsWith("//")) {
+    return `https:${url}`;
+  }
+
+  if (url.startsWith("/") || url.includes("://") || url.startsWith("mailto:")) {
+    return url;
+  }
+
+  return `https://${url}`;
 }
 
 export function getCategoryAndTagUrl(category, subcategories, tag) {
@@ -500,9 +505,13 @@ export function getCategoryAndTagUrl(category, subcategories, tag) {
 
   if (category) {
     url = category.path;
-    if (subcategories && category.default_list_filter === "none") {
-      url += "/all";
-    } else if (!subcategories && category.default_list_filter === "all") {
+    if (category.default_list_filter === "none" && subcategories) {
+      if (subcategories) {
+        url += "/all";
+      } else {
+        url += "/none";
+      }
+    } else if (!subcategories) {
       url += "/none";
     }
   }
@@ -523,6 +532,24 @@ export function getEditCategoryUrl(category, subcategories, tab) {
     url += `/${tab}`;
   }
   return getURL(url);
+}
+
+export function getCanonicalUrl(absoluteUrl) {
+  const canonicalUrl = new URL(absoluteUrl);
+  canonicalUrl.pathname = canonicalUrl.pathname.replace(
+    TRAILING_SLASH_REGEX,
+    ""
+  );
+
+  const allowedSearchParams = new URLSearchParams();
+  for (const [key, value] of canonicalUrl.searchParams) {
+    if (ALLOWED_CANONICAL_PARAMS.includes(key)) {
+      allowedSearchParams.append(key, value);
+    }
+  }
+  canonicalUrl.search = allowedSearchParams.toString();
+
+  return canonicalUrl.toString();
 }
 
 export default _urlInstance;

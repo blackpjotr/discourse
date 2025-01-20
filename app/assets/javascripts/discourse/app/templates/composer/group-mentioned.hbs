@@ -1,2 +1,5 @@
-<a href {{action this.closeMessage this.message}} class="close">{{d-icon "times"}}</a>
-{{html-safe this.message.body}}
+<ComposerTipCloseButton @action={{fn this.closeMessage this.message}} />
+
+<p>
+  {{html-safe this.message.body}}
+</p>

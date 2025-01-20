@@ -141,24 +141,30 @@ TemplateCompiler.prototype.processString = function (string, relativePath) {
   if (pluginName) {
     filename = relativePath
       .replace(`discourse/plugins/${pluginName}/`, "")
-      .replace(/^(discourse\/)?templates\//, "javascripts/");
+      .replace(/^(discourse\/)?raw-templates\//, "javascripts/");
   } else {
-    filename = relativePath.replace(/^templates\//, "");
+    filename = relativePath.replace(/^raw-templates\//, "");
   }
 
   filename = filename.replace(/\.hbr$/, "");
-
-  return (
-    'import { template as compiler } from "discourse-common/lib/raw-handlebars";\n' +
-    'import { addRawTemplate } from "discourse-common/lib/raw-templates";\n\n' +
-    "let template = compiler(" +
-    this.precompile(string, false) +
-    ");\n\n" +
-    'addRawTemplate("' +
-    filename +
-    '", template, { core: true });\n' +
-    "export default template;"
+  const hasModernReplacement = string.includes(
+    "{{!-- has-modern-replacement --}}"
   );
+
+  return `
+    import { template as compiler } from "discourse/lib/raw-handlebars";
+    import { addRawTemplate } from "discourse/lib/raw-templates";
+
+    let template = compiler(${this.precompile(string, false)});
+
+    addRawTemplate("${filename}", template, {
+      core: ${!pluginName},
+      pluginName: ${JSON.stringify(pluginName)},
+      hasModernReplacement: ${hasModernReplacement},
+    });
+
+    export default template;
+  `;
 };
 
 TemplateCompiler.prototype.precompile = function (value, asObject) {

@@ -8,7 +8,7 @@ $footer-nav-height: 49px;
   --footer-nav-height: #{$footer-nav-height};
 }
 
-body.footer-nav-visible {
+html.footer-nav-visible {
   #main-outlet {
     padding-bottom: calc(var(--footer-nav-height) + 15px);
   }
@@ -19,9 +19,13 @@ body.footer-nav-visible {
     padding-bottom: 0px;
   }
 
-  #topic-progress-wrapper:not(.docked) {
-    margin-bottom: calc(var(--footer-nav-height) + env(safe-area-inset-bottom));
+  .with-topic-progress {
+    bottom: calc(
+      var(--footer-nav-height) + env(safe-area-inset-bottom) +
+        var(--composer-height, 0px)
+    );
   }
+
   .posts-filtered-notice {
     transition: all linear 0.1s;
     bottom: calc(var(--footer-nav-height) + env(safe-area-inset-bottom));
@@ -30,7 +34,7 @@ body.footer-nav-visible {
 
 .footer-nav {
   background-color: rgba(var(--header_background-rgb), 0.9);
-  box-shadow: shadow("footer-nav");
+  box-shadow: var(--shadow-footer-nav);
   height: var(--footer-nav-height);
   position: fixed;
   bottom: calc(var(--footer-nav-height) * -1);
@@ -70,13 +74,13 @@ body.footer-nav-visible {
 }
 
 @supports (-webkit-backdrop-filter: blur(10px)) {
-  body:not(.footer-nav-ipad) .footer-nav {
+  html:not(.footer-nav-ipad) .footer-nav {
     background-color: rgba(var(--header_background-rgb), 0.7);
     -webkit-backdrop-filter: blur(20px);
   }
 }
 
-body.footer-nav-ipad {
+html.footer-nav-ipad {
   padding-top: var(--footer-nav-height);
   .footer-nav {
     bottom: auto;
@@ -86,12 +90,7 @@ body.footer-nav-ipad {
     padding-bottom: 0; // resets safe-area-inset-bottom
   }
 
-  #reply-control,
-  #reply-control.fullscreen {
-    z-index: z("ipad-header-nav") + 1;
-  }
-
-  &.docked .d-header-wrap {
+  .d-header-wrap {
     top: var(--footer-nav-height);
   }
 }

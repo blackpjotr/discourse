@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 desc "Runs the qunit test suite"
-task "qunit:test", [:timeout, :qunit_path] do |_, args|
+task "qunit:test", %i[qunit_path filter] do |_, args|
   require "socket"
   require "chrome_installed_checker"
 
@@ -11,13 +11,13 @@ task "qunit:test", [:timeout, :qunit_path] do |_, args|
     abort err.message
   end
 
-  unless system("command -v yarn >/dev/null;")
-    abort "Yarn is not installed. Download from https://yarnpkg.com/lang/en/docs/install/"
+  unless system("command -v pnpm >/dev/null;")
+    abort "pnpm is not installed. See https://pnpm.io/installation"
   end
 
-  report_requests = ENV['REPORT_REQUESTS'] == "1"
+  report_requests = ENV["REPORT_REQUESTS"] == "1"
 
-  system("yarn install")
+  system("pnpm install", exception: true)
 
   # ensure we have this port available
   def port_available?(port)
@@ -32,15 +32,11 @@ task "qunit:test", [:timeout, :qunit_path] do |_, args|
     puts "The 'legacy' ember environment is discontinued - running tests with ember-cli assets..."
   end
 
-  port = ENV['TEST_SERVER_PORT'] || 60099
-  while !port_available? port
-    port += 1
-  end
+  port = ENV["TEST_SERVER_PORT"] || 60_099
+  port += 1 while !port_available? port
 
-  unicorn_port = 60098
-  while unicorn_port == port || !port_available?(unicorn_port)
-    unicorn_port += 1
-  end
+  unicorn_port = 60_098
+  unicorn_port += 1 while unicorn_port == port || !port_available?(unicorn_port)
 
   env = {
     "RAILS_ENV" => ENV["QUNIT_RAILS_ENV"] || "test",
@@ -55,26 +51,27 @@ task "qunit:test", [:timeout, :qunit_path] do |_, args|
     "UNICORN_TIMEOUT" => "90",
   }
 
-  pid = Process.spawn(
-    env,
-    "#{Rails.root}/bin/unicorn",
-    pgroup: true
-  )
+  pid = Process.spawn(env, "#{Rails.root}/bin/unicorn", pgroup: true)
 
   begin
     success = true
-    test_path = "#{Rails.root}/test"
     qunit_path = args[:qunit_path]
+    filter = args[:filter]
 
     options = { seed: (ENV["QUNIT_SEED"] || Random.new.seed), hidepassed: 1 }
 
-    %w{module filter qunit_skip_core qunit_single_plugin theme_name theme_url theme_id}.each do |arg|
-      options[arg] = ENV[arg.upcase] if ENV[arg.upcase].present?
-    end
+    %w[
+      module
+      filter
+      qunit_skip_core
+      qunit_single_plugin
+      theme_name
+      theme_url
+      theme_id
+      target
+    ].each { |arg| options[arg] = ENV[arg.upcase] if ENV[arg.upcase].present? }
 
-    if report_requests
-      options['report_requests'] = '1'
-    end
+    options["report_requests"] = "1" if report_requests
 
     query = options.to_query
 
@@ -84,34 +81,62 @@ task "qunit:test", [:timeout, :qunit_path] do |_, args|
     end
 
     # wait for server to accept connections
-    require 'net/http'
-    warmup_path = "/assets/discourse/tests/active-plugins.js"
-    uri = URI("http://localhost:#{unicorn_port}/#{warmup_path}")
+    require "net/http"
+    uri = URI("http://localhost:#{unicorn_port}/srv/status")
     puts "Warming up Rails server"
 
     begin
       Net::HTTP.get(uri)
-    rescue Errno::ECONNREFUSED, Errno::EADDRNOTAVAIL, Net::ReadTimeout, EOFError
+    rescue Errno::ECONNREFUSED,
+           Errno::EADDRNOTAVAIL,
+           Net::ReadTimeout,
+           Net::HTTPBadResponse,
+           EOFError
       sleep 1
-      retry unless elapsed() > 60
+      retry if elapsed() <= 60
       puts "Timed out. Can not connect to forked server!"
       exit 1
     end
     puts "Rails server is warmed up"
 
-    cmd = ["env", "UNICORN_PORT=#{unicorn_port}"]
+    env = { "UNICORN_PORT" => unicorn_port.to_s }
+    cmd = []
+
+    parallel = ENV["QUNIT_PARALLEL"]
 
     if qunit_path
       # Bypass `ember test` - it only works properly for the `/tests` path.
       # We have to trigger a `build` manually so that JS is available for rails to serve.
-      system("yarn", "ember", "build", chdir: "#{Rails.root}/app/assets/javascripts/discourse")
-      test_page = "#{qunit_path}?#{query}&testem=1"
-      cmd += ["yarn", "testem", "ci", "-f", "testem.js", "-t", test_page]
+      system(
+        "pnpm",
+        "ember",
+        "build",
+        chdir: "#{Rails.root}/app/assets/javascripts/discourse",
+        exception: true,
+      )
+
+      env["THEME_TEST_PAGES"] = if ENV["THEME_IDS"]
+        ENV["THEME_IDS"]
+          .split("|")
+          .map { |theme_id| "#{qunit_path}?#{query}&testem=1&id=#{theme_id}" }
+          .shuffle
+          .join(",")
+      else
+        "#{qunit_path}?#{query}&testem=1"
+      end
+
+      cmd += %w[pnpm testem ci -f testem.js]
+      cmd += ["--parallel", parallel] if parallel
     else
-      cmd += ["yarn", "ember", "test", "--query", query]
+      cmd += ["pnpm", "ember", "exam", "--query", query]
+      cmd += ["--load-balance", "--parallel", parallel] if parallel
+      cmd += ["--filter", filter] if filter
+      cmd << "--write-execution-file" if ENV["QUNIT_WRITE_EXECUTION_FILE"]
     end
 
-    system(*cmd, chdir: "#{Rails.root}/app/assets/javascripts/discourse")
+    # Print out all env for debugging purposes
+    p env
+    system(env, *cmd, chdir: "#{Rails.root}/app/assets/javascripts/discourse")
 
     success &&= $?.success?
   ensure

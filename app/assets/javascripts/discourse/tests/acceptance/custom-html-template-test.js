@@ -1,25 +1,25 @@
-import { acceptance, query } from "discourse/tests/helpers/qunit-helpers";
+import { visit } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
 import { test } from "qunit";
-import { visit } from "@ember/test-helpers";
+import { withSilencedDeprecationsAsync } from "discourse/lib/deprecated";
+import { acceptance } from "discourse/tests/helpers/qunit-helpers";
+import { registerTemporaryModule } from "discourse/tests/helpers/temporary-module-helper";
 
 acceptance("CustomHTML template", function (needs) {
   needs.hooks.beforeEach(() => {
-    // eslint-disable-next-line no-undef
-    Ember.TEMPLATES["top"] = hbs`<span class='top-span'>TOP</span>`;
-  });
-
-  needs.hooks.afterEach(() => {
-    // eslint-disable-next-line no-undef
-    delete Ember.TEMPLATES["top"];
+    registerTemporaryModule(
+      "discourse/templates/top",
+      hbs`<span class='top-span'>TOP</span>`
+    );
   });
 
   test("renders custom template", async function (assert) {
-    await visit("/static/faq");
-    assert.strictEqual(
-      query("span.top-span").innerText,
-      "TOP",
-      "it inserted the template"
+    await withSilencedDeprecationsAsync(
+      "discourse.custom_html_template",
+      async () => {
+        await visit("/static/faq");
+        assert.dom("span.top-span").hasText("TOP", "inserted the template");
+      }
     );
   });
 });

@@ -1,12 +1,9 @@
 # frozen_string_literal: true
 
-require 'cache'
+require "cache"
 
 RSpec.describe Cache do
-
-  let :cache do
-    Cache.new
-  end
+  subject(:cache) { Cache.new }
 
   it "supports exist?" do
     cache.write("testing", 1.1)
@@ -43,9 +40,7 @@ RSpec.describe Cache do
   it "can delete correctly" do
     cache.delete("key")
 
-    cache.fetch("key", expires_in: 1.minute) do
-      "test"
-    end
+    cache.fetch("key", expires_in: 1.minute) { "test" }
 
     expect(cache.fetch("key")).to eq("test")
 
@@ -59,9 +54,7 @@ RSpec.describe Cache do
 
     key = cache.normalize_key("key")
 
-    cache.fetch("key", expires_in: 1.minute) do
-      "bob"
-    end
+    cache.fetch("key", expires_in: 1.minute) { "bob" }
 
     expect(Discourse.redis.ttl(key)).to be_within(2.seconds).of(1.minute)
 
@@ -75,9 +68,10 @@ RSpec.describe Cache do
   it "can store and fetch correctly" do
     cache.delete "key"
 
-    r = cache.fetch "key" do
-      "bob"
-    end
+    r =
+      cache.fetch "key" do
+        "bob"
+      end
 
     expect(r).to eq("bob")
   end
@@ -85,9 +79,10 @@ RSpec.describe Cache do
   it "can fetch existing correctly" do
     cache.write "key", "bill"
 
-    r = cache.fetch "key" do
-      "bob"
-    end
+    r =
+      cache.fetch "key" do
+        "bob"
+      end
     expect(r).to eq("bill")
   end
 
@@ -106,5 +101,37 @@ RSpec.describe Cache do
     cache.write "foo:bar", "baz", expires_in: 3.minutes
 
     expect(cache.redis.ttl("#{cache.namespace}:foo:bar")).to eq(180)
+  end
+
+  describe ".fetch" do
+    subject(:fetch_value) { cache.fetch("my_key") { "bob" } }
+
+    context "when the cache is corrupt" do
+      before do
+        cache.delete("my_key")
+        Discourse.redis.setex(cache.normalize_key("my_key"), described_class::MAX_CACHE_AGE, "")
+      end
+
+      it "runs and return the provided block" do
+        expect(fetch_value).to eq("bob")
+      end
+
+      it "generates a new cache entry" do
+        fetch_value
+        expect(cache.read("my_key")).to eq("bob")
+      end
+    end
+
+    context "when there is a race condition due to key expiring between GET calls" do
+      before do
+        allow(Discourse.redis).to receive(:get).and_wrap_original do |original_method, *args|
+          original_method.call(*args).tap { Discourse.redis.del(*args) }
+        end
+      end
+
+      it "isn't prone to that race condition" do
+        expect(fetch_value).to eq("bob")
+      end
+    end
   end
 end

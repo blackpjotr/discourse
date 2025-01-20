@@ -7,8 +7,6 @@
 }
 
 #reply-control {
-  z-index: z("mobile-composer");
-
   .reply-area {
     padding: 6px;
     padding-bottom: unquote("max(env(safe-area-inset-bottom), 6px)");
@@ -16,21 +14,11 @@
   }
 
   &.open {
-    height: 250px;
-    &.edit-title {
-      height: 100%;
-    }
+    z-index: z("mobile-composer");
   }
 
-  .keyboard-visible &.open {
-    height: 100%; // Android: Reduces composer jumpiness when the keyboard toggles
-  }
-
-  .keyboard-visible body.ios-safari-composer-hacks &.open {
-    height: calc(var(--composer-vh, 1vh) * 100);
-    .reply-area {
-      padding-bottom: 6px;
-    }
+  .keyboard-visible &.open .reply-area {
+    padding-bottom: 6px;
   }
 
   .reply-to {
@@ -67,16 +55,9 @@
   }
 
   &.draft {
-    z-index: z("footer-nav") + 1;
-    padding-bottom: env(safe-area-inset-bottom);
-
     .toggle-toolbar,
     .toggle-minimize {
       top: 6px;
-    }
-    .draft-text {
-      width: calc(100% - 40px);
-      @include ellipsis;
     }
   }
 
@@ -86,15 +67,25 @@
   }
 
   .category-input,
-  .with-tags .category-input {
+  .with-tags.with-category .category-input {
     margin-bottom: 6px;
     max-width: calc(50% - 3px);
   }
 
   .submit-panel {
     margin-top: 6px;
+    flex-wrap: wrap;
+    gap: 0.25em 0;
+
+    .create {
+      max-width: 50vw;
+      span {
+        @include ellipsis;
+      }
+    }
 
     .save-or-cancel {
+      margin-right: 0.5em;
       flex: 1 1 auto;
 
       #draft-status,
@@ -136,8 +127,9 @@
         display: none;
       }
     }
+
     .d-editor-preview-wrapper {
-      position: fixed;
+      position: absolute;
       z-index: z("fullscreen");
       top: 0;
       bottom: 0;
@@ -152,6 +144,10 @@
       .d-editor-preview {
         margin-bottom: 40px;
       }
+    }
+
+    .composer-controls {
+      display: none;
     }
   }
 
@@ -187,22 +183,10 @@
       z-index: z("base");
     }
 
-    .mini-tag-chooser {
+    .tags-input {
       margin: 0 0 6px 6px;
       max-width: calc(50% - 3px);
-    }
-
-    .selected-name {
-      .name {
-        font-size: $font-down-1;
-        .badge-wrapper {
-          font-size: $font-0;
-        }
-      }
-    }
-
-    .formatted-selection {
-      font-size: var(--font-down-1);
+      width: 100%;
     }
   }
 

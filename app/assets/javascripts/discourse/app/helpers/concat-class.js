@@ -1,8 +1,7 @@
-import { helper } from "@ember/component/helper";
+export default function concatClass(...args) {
+  const classes = args.flat().filter(Boolean).join(" ");
 
-function concatClass(args) {
-  const classes = args.compact().join(" ");
-  return classes.length ? classes : undefined;
+  if (classes.length) {
+    return classes;
+  }
 }
-
-export default helper(concatClass);

@@ -21,14 +21,22 @@ RSpec.describe UserActionsController do
 
       before do
         UserActionManager.enable
+        post.user.user_stat.update!(post_count: 1)
       end
 
       it "renders list correctly" do
         user_actions
         expect(response).to have_http_status :ok
-        expect(actions.first).to include "acting_name" => post.user.name,
-                                         "post_number" => 1
+        expect(actions.first).to include "acting_name" => post.user.name, "post_number" => 1
         expect(actions.first).not_to include "email"
+      end
+
+      it "returns categories when lazy load categories is enabled" do
+        SiteSetting.lazy_load_categories_groups = "#{Group::AUTO_GROUPS[:everyone]}"
+        user_actions
+        expect(response.status).to eq(200)
+        category_ids = response.parsed_body["categories"].map { |category| category["id"] }
+        expect(category_ids).to contain_exactly(post.topic.category.id)
       end
 
       context "when 'acting_username' is provided" do
@@ -48,16 +56,12 @@ RSpec.describe UserActionsController do
       end
 
       context "when user's profile is hidden" do
-        fab!(:post) { Fabricate(:post) }
+        fab!(:post)
 
-        before do
-          post.user.user_option.update_column(:hide_profile_and_presence, true)
-        end
+        before { post.user.user_option.update_column(:hide_profile, true) }
 
         context "when `allow_users_to_hide_profile` is disabled" do
-          before do
-            SiteSetting.allow_users_to_hide_profile = false
-          end
+          before { SiteSetting.allow_users_to_hide_profile = false }
 
           it "succeeds" do
             user_actions
@@ -86,11 +90,9 @@ RSpec.describe UserActionsController do
         end
 
         context "when user is logged in" do
-          fab!(:user) { Fabricate(:user) }
+          fab!(:user)
 
-          before do
-            sign_in(user)
-          end
+          before { sign_in(user) }
 
           UserAction.private_types.each do |action_type|
             action_name = UserAction.types.key(action_type)
@@ -101,11 +103,9 @@ RSpec.describe UserActionsController do
         end
 
         context "when user is a moderator" do
-          fab!(:moderator) { Fabricate(:moderator) }
+          fab!(:moderator)
 
-          before do
-            sign_in(moderator)
-          end
+          before { sign_in(moderator) }
 
           UserAction.private_types.each do |action_type|
             action_name = UserAction.types.key(action_type)
@@ -116,11 +116,9 @@ RSpec.describe UserActionsController do
         end
 
         context "when user is an admin" do
-          fab!(:admin) { Fabricate(:admin) }
+          fab!(:admin)
 
-          before do
-            sign_in(admin)
-          end
+          before { sign_in(admin) }
 
           UserAction.private_types.each do |action_type|
             action_name = UserAction.types.key(action_type)
@@ -131,26 +129,16 @@ RSpec.describe UserActionsController do
         end
 
         def list_and_check(action_type, expected_response)
-          get "/user_actions.json", params: {
-            filter: action_type,
-            username: another_user.username
-          }
+          get "/user_actions.json", params: { filter: action_type, username: another_user.username }
 
           expect(response.status).to eq(expected_response)
         end
       end
 
       context "when bad data is provided" do
-        fab!(:user) { Fabricate(:user) }
+        fab!(:user)
 
-        let(:params) do
-          {
-            filter: filter,
-            username: username,
-            offset: offset,
-            limit: limit
-          }
-        end
+        let(:params) { { filter: filter, username: username, offset: offset, limit: limit } }
         let(:filter) { "1,2" }
         let(:username) { user.username }
         let(:offset) { "0" }

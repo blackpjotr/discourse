@@ -1,13 +1,15 @@
-import { module, test } from "qunit";
-import { exists, query } from "discourse/tests/helpers/qunit-helpers";
-import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import ClassicComponent, { setComponentTemplate } from "@ember/component";
+import templateOnly from "@ember/component/template-only";
 import { click, fillIn, render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
+import { module, test } from "qunit";
+import { bind } from "discourse/lib/decorators";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import widgetHbs from "discourse/widgets/hbs-compiler";
-import Widget from "discourse/widgets/widget";
-import ClassicComponent from "@ember/component";
-import RenderGlimmer from "discourse/widgets/render-glimmer";
-import { bind } from "discourse-common/utils/decorators";
+import RenderGlimmer, {
+  registerWidgetShim,
+} from "discourse/widgets/render-glimmer";
+import Widget, { deleteFromRegistry } from "discourse/widgets/widget";
 
 class DemoWidget extends Widget {
   static actionTriggered = false;
@@ -45,6 +47,7 @@ class DemoWidget extends Widget {
       ),
     ];
   }
+
   dummyAction() {}
 
   @bind
@@ -65,20 +68,24 @@ class DemoComponent extends ClassicComponent {
     super.init(...arguments);
   }
 
+  willDestroy() {
+    super.willDestroy(...arguments);
+    DemoComponent.eventLog.push("willDestroy");
+  }
+
   didInsertElement() {
+    super.didInsertElement(...arguments);
     DemoComponent.eventLog.push("didInsertElement");
   }
 
   willDestroyElement() {
+    super.willDestroyElement(...arguments);
     DemoComponent.eventLog.push("willDestroyElement");
   }
 
   didReceiveAttrs() {
+    super.didReceiveAttrs(...arguments);
     DemoComponent.eventLog.push("didReceiveAttrs");
-  }
-
-  willDestroy() {
-    DemoComponent.eventLog.push("willDestroy");
   }
 }
 
@@ -117,6 +124,9 @@ class ToggleDemoWidget extends Widget {
   }
 }
 
+const SimpleComponent = templateOnly();
+setComponentTemplate(hbs`<div class="component-shim"></div>`, SimpleComponent);
+
 module("Integration | Component | Widget | render-glimmer", function (hooks) {
   setupRenderingTest(hooks);
 
@@ -126,12 +136,30 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
     this.registry.register("widget:demo-widget", DemoWidget);
     this.registry.register("widget:toggle-demo-widget", ToggleDemoWidget);
     this.registry.register("component:demo-component", DemoComponent);
+    registerWidgetShim(
+      "render-glimmer-test-shim",
+      "div.my-wrapper",
+      hbs`<span class='shim-content'>{{@data.attr1}}</span>`
+    );
+    registerWidgetShim(
+      "render-glimmer-test-wrapper-attrs",
+      "div.initial-wrapper-class",
+      hbs`{{@setWrapperElementAttrs class=(concat-class "static-extra-class" @data.extraClass) data-some-attr=@data.dataAttrValue}}`
+    );
+    registerWidgetShim(
+      "render-glimmer-test-component-shim",
+      "div.initial-wrapper-class",
+      SimpleComponent
+    );
   });
 
   hooks.afterEach(function () {
     this.registry.unregister("widget:demo-widget");
     this.registry.unregister("widget:toggle-demo-widget");
     this.registry.unregister("component:demo-component");
+    deleteFromRegistry("render-glimmer-test-shim");
+    deleteFromRegistry("render-glimmer-test-wrapper-attrs");
+    deleteFromRegistry("render-glimmer-test-component-shim");
   });
 
   test("argument handling", async function (assert) {
@@ -141,27 +169,20 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
         <MountWidget @widget="demo-widget" @args={{hash arg1="val1" dynamicArg=this.dynamicValue}} />`
     );
 
-    assert.true(exists("div.my-widget"), "widget is rendered");
-    assert.true(exists("div.glimmer-content"), "glimmer content is rendered");
-    assert.strictEqual(
-      query("div.glimmer-content").innerText,
-      "arg1=val1 dynamicArg=",
-      "arguments are passed through"
-    );
+    assert.dom("div.my-widget").exists("widget is rendered");
+    assert.dom("div.glimmer-content").exists("glimmer content is rendered");
+    assert
+      .dom("div.glimmer-content")
+      .hasText("arg1=val1 dynamicArg=", "arguments are passed through");
 
     await fillIn("input.dynamic-value-input", "somedynamicvalue");
-    assert.strictEqual(
-      query("div.glimmer-content").innerText,
-      "arg1=val1 dynamicArg=",
-      "changed arguments do not change before rerender"
-    );
-
     await click(".my-widget button");
-    assert.strictEqual(
-      query("div.glimmer-content").innerText,
-      "arg1=val1 dynamicArg=somedynamicvalue",
-      "changed arguments are applied after rerender"
-    );
+    assert
+      .dom("div.glimmer-content")
+      .hasText(
+        "arg1=val1 dynamicArg=somedynamicvalue",
+        "changed arguments are applied after rerender"
+      );
   });
 
   test("child component lifecycle", async function (assert) {
@@ -179,9 +200,9 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
         {{/unless}}`
     );
 
-    assert.true(exists("div.my-widget"), "widget is rendered");
-    assert.true(exists("div.glimmer-content"), "glimmer content is rendered");
-    assert.true(exists("div.demo-component"), "demo component is rendered");
+    assert.dom("div.my-widget").exists("widget is rendered");
+    assert.dom("div.glimmer-content").exists("glimmer content is rendered");
+    assert.dom("div.demo-component").exists("demo component is rendered");
 
     assert.deepEqual(
       DemoComponent.eventLog,
@@ -192,16 +213,10 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
     DemoComponent.eventLog = [];
 
     await fillIn("input.dynamic-value-input", "somedynamicvalue");
-    assert.deepEqual(
-      DemoComponent.eventLog,
-      [],
-      "component is not notified of attr change before widget rerender"
-    );
-
     await click(".my-widget button");
     assert.deepEqual(
       DemoComponent.eventLog,
-      ["didReceiveAttrs"],
+      ["didReceiveAttrs", "didReceiveAttrs"], // once for input, once for event
       "component is notified of attr change during widget rerender"
     );
 
@@ -224,6 +239,14 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
     );
   });
 
+  test("rendering component directly", async function (assert) {
+    await render(hbs`
+      <MountWidget @widget="render-glimmer-test-component-shim" />
+    `);
+
+    assert.dom("div.component-shim").exists();
+  });
+
   test("trigger widget actions from component", async function (assert) {
     assert.false(
       DemoWidget.actionTriggered,
@@ -238,10 +261,9 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
         {{/unless}}`
     );
 
-    assert.true(
-      exists("div.demo-component button"),
-      "component button is rendered"
-    );
+    assert
+      .dom("div.demo-component button")
+      .exists("component button is rendered");
 
     await click("div.demo-component button");
     assert.true(DemoWidget.actionTriggered, "widget event is triggered");
@@ -257,25 +279,20 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
       "widget event has not been triggered yet"
     );
 
-    assert.strictEqual(
-      query(".action-state").innerText,
-      "false",
-      "eventTriggered is false in nested component"
-    );
+    assert
+      .dom(".action-state")
+      .hasText("false", "eventTriggered is false in nested component");
 
-    assert.true(
-      exists("div.demo-component button"),
-      "component button is rendered"
-    );
+    assert
+      .dom("div.demo-component button")
+      .exists("component button is rendered");
 
     await click("div.demo-component button");
     assert.true(DemoWidget.actionTriggered, "widget event is triggered");
 
-    assert.strictEqual(
-      query(".action-state").innerText,
-      "true",
-      "eventTriggered is true in nested component"
-    );
+    assert
+      .dom(".action-state")
+      .hasText("true", "eventTriggered is true in nested component");
   });
 
   test("developer ergonomics", function (assert) {
@@ -304,10 +321,46 @@ module("Integration | Component | Widget | render-glimmer", function (hooks) {
 
   test("multiple adjacent components", async function (assert) {
     await render(hbs`<MountWidget @widget="toggle-demo-widget" />`);
-    assert.strictEqual(query("div.glimmer-wrapper").innerText, "One");
+    assert.dom("div.glimmer-wrapper").hasText("One");
     await click(".toggleButton");
-    assert.strictEqual(query("div.glimmer-wrapper").innerText, "Two");
+    assert.dom("div.glimmer-wrapper").hasText("Two");
     await click(".toggleButton");
-    assert.strictEqual(query("div.glimmer-wrapper").innerText, "One");
+    assert.dom("div.glimmer-wrapper").hasText("One");
+  });
+
+  test("registerWidgetShim can register a fake widget", async function (assert) {
+    await render(
+      hbs`<MountWidget @widget="render-glimmer-test-shim" @args={{hash attr1="val1"}} />`
+    );
+
+    assert.dom("div.my-wrapper span.shim-content").exists();
+    assert.dom("div.my-wrapper span.shim-content").hasText("val1");
+  });
+
+  test("setWrapperElementAttrs API", async function (assert) {
+    await render(
+      hbs`<MountWidget @widget="render-glimmer-test-wrapper-attrs" @args={{hash extraClass=this.extraClass dataAttrValue=this.dataAttrValue}} />`
+    );
+
+    assert.dom("div.initial-wrapper-class").exists();
+    assert
+      .dom("div.initial-wrapper-class")
+      .hasAttribute("class", "initial-wrapper-class static-extra-class");
+    assert
+      .dom("div.initial-wrapper-class")
+      .doesNotHaveAttribute("data-some-attr");
+
+    this.set("extraClass", "dynamic-extra-class");
+    this.set("dataAttrValue", "hello world");
+
+    assert
+      .dom("div.initial-wrapper-class")
+      .hasAttribute(
+        "class",
+        "initial-wrapper-class static-extra-class dynamic-extra-class"
+      );
+    assert
+      .dom("div.initial-wrapper-class")
+      .hasAttribute("data-some-attr", "hello world");
   });
 });

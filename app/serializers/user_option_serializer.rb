@@ -12,6 +12,7 @@ class UserOptionSerializer < ApplicationSerializer
              :dark_scheme_id,
              :dynamic_favicon,
              :enable_quoting,
+             :enable_smart_lists,
              :enable_defer,
              :digest_after_minutes,
              :automatically_unpin_topics,
@@ -28,20 +29,29 @@ class UserOptionSerializer < ApplicationSerializer
              :enable_allowed_pm_users,
              :homepage_id,
              :hide_profile_and_presence,
+             :hide_profile,
+             :hide_presence,
              :text_size,
              :text_size_seq,
              :title_count_mode,
+             :bookmark_auto_delete_preference,
              :timezone,
              :skip_new_user_tips,
              :default_calendar,
-             :oldest_search_log_date
+             :oldest_search_log_date,
+             :seen_popups,
+             :sidebar_link_to_filtered_list,
+             :sidebar_show_count_of_new_items,
+             :watched_precedence_over_muted,
+             :topics_unread_when_closed
 
   def auto_track_topics_after_msecs
     object.auto_track_topics_after_msecs || SiteSetting.default_other_auto_track_topics_after_msecs
   end
 
   def notification_level_when_replying
-    object.notification_level_when_replying || SiteSetting.default_other_notification_level_when_replying
+    object.notification_level_when_replying ||
+      SiteSetting.default_other_notification_level_when_replying
   end
 
   def new_topic_duration_minutes

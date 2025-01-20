@@ -1,10 +1,9 @@
+import { render } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
+import { resetCache } from "pretty-text/upload-short-url";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { render } from "@ember/test-helpers";
-import { query } from "discourse/tests/helpers/qunit-helpers";
-import { hbs } from "ember-cli-htmlbars";
 import pretender, { response } from "discourse/tests/helpers/create-pretender";
-import { resetCache } from "pretty-text/upload-short-url";
 
 module("Integration | Component | cook-text", function (hooks) {
   setupRenderingTest(hooks);
@@ -14,10 +13,9 @@ module("Integration | Component | cook-text", function (hooks) {
   });
 
   test("renders markdown", async function (assert) {
-    await render(hbs`<CookText @rawText="_foo_" @class="post-body" />`);
+    await render(hbs`<CookText @rawText="_foo_" class="post-body" />`);
 
-    const html = query(".post-body").innerHTML.trim();
-    assert.strictEqual(html, "<p><em>foo</em></p>");
+    assert.dom(".post-body").hasHtml("<p><em>foo</em></p>");
   });
 
   test("resolves short URLs", async function (assert) {
@@ -32,13 +30,11 @@ module("Integration | Component | cook-text", function (hooks) {
     );
 
     await render(
-      hbs`<CookText @rawText="![an image](upload://a.png)" @class="post-body" />`
+      hbs`<CookText @rawText="![an image](upload://a.png)" class="post-body" />`
     );
 
-    const html = query(".post-body").innerHTML.trim();
-    assert.strictEqual(
-      html,
-      '<p><img src="/images/avatar.png" alt="an image"></p>'
-    );
+    assert
+      .dom(".post-body")
+      .hasHtml('<p><img src="/images/avatar.png" alt="an image"></p>');
   });
 });

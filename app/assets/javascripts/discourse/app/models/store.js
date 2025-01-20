@@ -1,4 +1,4 @@
-import deprecated from "discourse-common/lib/deprecated";
+import deprecated from "discourse/lib/deprecated";
 export { default, flushMap } from "discourse/services/store";
 
 deprecated(
@@ -6,5 +6,6 @@ deprecated(
   {
     since: "2.8.0.beta8",
     dropFrom: "2.9.0.beta1",
+    id: "discourse.models-store",
   }
 );

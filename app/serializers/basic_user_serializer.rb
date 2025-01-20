@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BasicUserSerializer < ApplicationSerializer
+  include UserStatusMixin
+
   attributes :id, :username, :name, :avatar_template
 
   def name
@@ -28,9 +30,9 @@ class BasicUserSerializer < ApplicationSerializer
   end
 
   def categories_with_notification_level(lookup_level)
-    category_user_notification_levels.select do |id, level|
-      level == CategoryUser.notification_levels[lookup_level]
-    end.keys
+    category_user_notification_levels
+      .select { |id, level| level == CategoryUser.notification_levels[lookup_level] }
+      .keys
   end
 
   def category_user_notification_levels

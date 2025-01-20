@@ -1,12 +1,8 @@
 import DiscourseRoute from "discourse/routes/discourse";
-import UserField from "admin/models/user-field";
+import { i18n } from "discourse-i18n";
 
-export default DiscourseRoute.extend({
-  model() {
-    return this.store.findAll("user-field");
-  },
-
-  setupController(controller, model) {
-    controller.setProperties({ model, fieldTypes: UserField.fieldTypes() });
-  },
-});
+export default class AdminUserFieldsRoute extends DiscourseRoute {
+  titleToken() {
+    return i18n("admin.user_fields.title");
+  }
+}

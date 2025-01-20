@@ -1,11 +1,10 @@
 import UserMenuNotificationsList from "discourse/components/user-menu/notifications-list";
 import { ajax } from "discourse/lib/ajax";
-import Notification from "discourse/models/notification";
-import showModal from "discourse/lib/show-modal";
-import I18n from "I18n";
-import UserMenuNotificationItem from "discourse/lib/user-menu/notification-item";
 import UserMenuBookmarkItem from "discourse/lib/user-menu/bookmark-item";
+import UserMenuNotificationItem from "discourse/lib/user-menu/notification-item";
 import Bookmark from "discourse/models/bookmark";
+import Notification from "discourse/models/notification";
+import { i18n } from "discourse-i18n";
 
 export default class UserMenuBookmarksList extends UserMenuNotificationsList {
   get dismissTypes() {
@@ -17,7 +16,7 @@ export default class UserMenuBookmarksList extends UserMenuNotificationsList {
   }
 
   get showAllTitle() {
-    return I18n.t("user_menu.view_all_bookmarks");
+    return i18n("user_menu.view_all_bookmarks");
   }
 
   get showDismiss() {
@@ -25,7 +24,7 @@ export default class UserMenuBookmarksList extends UserMenuNotificationsList {
   }
 
   get dismissTitle() {
-    return I18n.t("user.dismiss_bookmarks_tooltip");
+    return i18n("user.dismiss_bookmarks_tooltip");
   }
 
   get itemsCacheKey() {
@@ -43,6 +42,12 @@ export default class UserMenuBookmarksList extends UserMenuNotificationsList {
     // we can stop using `get()` when the User model is refactored into native
     // class with @tracked properties.
     return this.currentUser.get(key) || 0;
+  }
+
+  get dismissConfirmationText() {
+    return i18n("notifications.dismiss_confirmation.body.bookmarks", {
+      count: this.#unreadBookmarkRemindersCount,
+    });
   }
 
   async fetchItems() {
@@ -68,21 +73,14 @@ export default class UserMenuBookmarksList extends UserMenuNotificationsList {
     await Bookmark.applyTransformations(bookmarks);
     content.push(
       ...bookmarks.map((bookmark) => {
-        return new UserMenuBookmarkItem({ bookmark });
+        return new UserMenuBookmarkItem({
+          bookmark,
+          siteSettings: this.siteSettings,
+          site: this.site,
+        });
       })
     );
 
     return content;
-  }
-
-  dismissWarningModal() {
-    const modalController = showModal("dismiss-notification-confirmation");
-    modalController.set(
-      "confirmationMessage",
-      I18n.t("notifications.dismiss_confirmation.body.bookmarks", {
-        count: this.#unreadBookmarkRemindersCount,
-      })
-    );
-    return modalController;
   }
 }

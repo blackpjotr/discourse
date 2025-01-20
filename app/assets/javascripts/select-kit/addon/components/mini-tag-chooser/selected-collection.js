@@ -1,16 +1,14 @@
-import { reads } from "@ember/object/computed";
 import Component from "@ember/component";
 import { computed } from "@ember/object";
-import layout from "select-kit/templates/components/mini-tag-chooser/selected-collection";
+import { reads } from "@ember/object/computed";
+import { tagName } from "@ember-decorators/component";
 
-export default Component.extend({
-  tagName: "",
+@tagName("")
+export default class SelectedCollection extends Component {
+  @reads("collection.content.selectedTags.[]") selectedTags;
 
-  layout,
-
-  selectedTags: reads("collection.content.selectedTags.[]"),
-
-  tags: computed("selectedTags.[]", "selectKit.filter", function () {
+  @computed("selectedTags.[]", "selectKit.filter")
+  get tags() {
     if (!this.selectedTags) {
       return [];
     }
@@ -28,5 +26,5 @@ export default Component.extend({
         classNames: "selected-tag",
       };
     });
-  }),
-});
+  }
+}

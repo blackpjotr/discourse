@@ -1,22 +1,11 @@
-export default class PMTagSectionLink {
-  constructor({ tagName, currentUser }) {
-    this.tagName = tagName;
-    this.currentUser = currentUser;
-  }
+import BaseTagSectionLink from "discourse/lib/sidebar/user/tags-section/base-tag-section-link";
 
-  get name() {
-    return this.tagName;
-  }
-
+export default class PMTagSectionLink extends BaseTagSectionLink {
   get models() {
     return [this.currentUser, this.tagName];
   }
 
   get route() {
-    return "userPrivateMessages.tagsShow";
-  }
-
-  get text() {
-    return this.tagName;
+    return "userPrivateMessages.tags.show";
   }
 }

@@ -10,11 +10,21 @@ export default class BaseCustomSidebarSectionLink {
   }
 
   /**
+   * @returns {string} The classnames of the section link.
+   */
+  get classNames() {
+    return "";
+  }
+
+  /**
    * @returns {string} The Ember route which the section link should link to.
    */
-  get route() {
-    this._notImplemented();
-  }
+  get route() {}
+
+  /**
+   * @returns {string} URL to external website which the section link should link to.
+   */
+  get href() {}
 
   /**
    * @returns {Object} `model` argument for the <LinkTo> component. See https://api.emberjs.com/ember/release/classes/Ember.Templates.components/methods/LinkTo?anchor=LinkTo.
@@ -25,6 +35,11 @@ export default class BaseCustomSidebarSectionLink {
    * @returns {Object[]} `models` argument for the <LinkTo> component. See https://api.emberjs.com/ember/release/classes/Ember.Templates.components/methods/LinkTo?anchor=LinkTo.
    */
   get models() {}
+
+  /**
+   * @returns {boolean} `query` argument for the <LinkTo> component. See See https://api.emberjs.com/ember/release/classes/Ember.Templates.components/methods/LinkTo?anchor=LinkTo.
+   */
+  get query() {}
 
   /**
    * @returns {boolean} `current-when` argument for the <LinkTo> component. See See https://api.emberjs.com/ember/release/classes/Ember.Templates.components/methods/LinkTo?anchor=LinkTo.
@@ -44,6 +59,11 @@ export default class BaseCustomSidebarSectionLink {
   get text() {
     this._notImplemented();
   }
+
+  /**
+   * @returns {string} CSS class for the content text
+   */
+  get contentCSSClass() {}
 
   /**
    * @returns {string} Prefix type for the link. Accepted value: icon, image, text
@@ -68,22 +88,22 @@ export default class BaseCustomSidebarSectionLink {
   /**
    * @returns {string} CSS class for prefix
    */
-  get PrefixCSSClass() {}
+  get prefixCSSClass() {}
 
   /**
    * @returns {string} Suffix type for the link. Accepted value: icon
    */
-  get SuffixType() {}
+  get suffixType() {}
 
   /**
    * @returns {string} Suffix value for the link. Accepted value: icon name
    */
-  get SuffixValue() {}
+  get suffixValue() {}
 
   /**
    * @returns {string} CSS class for suffix
    */
-  get SuffixCSSClass() {}
+  get suffixCSSClass() {}
 
   /**
    * @returns {string} Type of the hover button. Accepted value: icon

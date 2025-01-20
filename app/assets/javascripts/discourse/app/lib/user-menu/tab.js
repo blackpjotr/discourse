@@ -1,3 +1,5 @@
+import { i18n } from "discourse-i18n";
+
 /**
  * abstract class representing a tab in the user menu
  */
@@ -23,7 +25,23 @@ export default class UserMenuTab {
   }
 
   /**
-   * @returns {string} Dasherized version of the component name that should be rendered in the panel area when the tab is active.
+   * @returns {string} title attribute for the tab element in the DOM
+   */
+  get title() {
+    const id = this.id.replaceAll(/-/g, "_");
+    const count = this.count;
+    let key;
+    if (this.count) {
+      key = `user_menu.tabs.${id}_with_unread`;
+    } else {
+      key = `user_menu.tabs.${id}`;
+    }
+
+    return i18n(key, { count });
+  }
+
+  /**
+   * @returns {Component} Component class that should be rendered in the panel area when the tab is active.
    */
   get panelComponent() {
     throw new Error("not implemented");

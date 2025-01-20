@@ -1,6 +1,10 @@
 import Route from "@ember/routing/route";
-export default Route.extend({
+import { service } from "@ember/service";
+
+export default class GroupMessagesIndex extends Route {
+  @service router;
+
   beforeModel() {
-    this.transitionTo("group.messages.inbox");
-  },
-});
+    this.router.transitionTo("group.messages.inbox");
+  }
+}

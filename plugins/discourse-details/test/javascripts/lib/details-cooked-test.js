@@ -1,39 +1,32 @@
-import PrettyText, { buildOptions } from "pretty-text/pretty-text";
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
+import { cook } from "discourse/lib/text";
 
-const defaultOpts = buildOptions({
-  siteSettings: {
-    enable_emoji: true,
-    emoji_set: "google_classic",
-    highlighted_languages: "json|ruby|javascript",
-    default_code_lang: "auto",
-  },
-  censoredWords: "shucks|whiz|whizzer",
-  getURL: (url) => url,
-});
+module("lib:details-cooked-test", (hooks) => {
+  setupTest(hooks);
 
-module("lib:details-cooked-test", function () {
-  test("details", function (assert) {
-    const cooked = (input, expected, text) => {
-      assert.strictEqual(
-        new PrettyText(defaultOpts).cook(input),
-        expected.replace(/\/>/g, ">"),
-        text
-      );
+  test("details", async (assert) => {
+    const testCooked = async (input, expected, text) => {
+      const cooked = (await cook(input)).toString();
+      assert.strictEqual(cooked, expected, text);
     };
-    cooked(
+
+    await testCooked(
       `<details><summary>Info</summary>coucou</details>`,
       `<details><summary>Info</summary>coucou</details>`,
       "manual HTML for details"
     );
 
-    cooked(
-      "[details=testing]\ntest\n[/details]",
-      `<details>
-<summary>
-testing</summary>
-<p>test</p>
-</details>`
+    await testCooked(
+      `[details=test'ing all the things]\ntest\n[/details]`,
+      `<details>\n<summary>\ntest'ing all the things</summary>\n<p>test</p>\n</details>`,
+      "details with spaces and a single quote"
+    );
+
+    await testCooked(
+      `[details=”test'ing all the things”]\ntest\n[/details]`,
+      `<details>\n<summary>\ntest'ing all the things</summary>\n<p>test</p>\n</details>`,
+      "details surrounded by finnish double quotes"
     );
   });
 });

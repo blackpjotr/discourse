@@ -1,19 +1,33 @@
 import Component from "@glimmer/component";
-import { inject as service } from "@ember/service";
 import { action } from "@ember/object";
-import showModal from "discourse/lib/show-modal";
+import { service } from "@ember/service";
+import DoNotDisturbModal from "discourse/components/modal/do-not-disturb";
+import UserStatusModal from "discourse/components/modal/user-status";
+import { ajax } from "discourse/lib/ajax";
+import DoNotDisturb from "discourse/lib/do-not-disturb";
+import { userPath } from "discourse/lib/url";
+
+const _extraItems = [];
+
+export function addUserMenuProfileTabItem(item) {
+  _extraItems.push(item);
+}
+
+export function resetUserMenuProfileTabItems() {
+  _extraItems.clear();
+}
 
 export default class UserMenuProfileTabContent extends Component {
   @service currentUser;
   @service siteSettings;
+  @service userStatus;
+  @service modal;
+
   saving = false;
 
   get showToggleAnonymousButton() {
     return (
-      (this.siteSettings.allow_anonymous_posting &&
-        this.currentUser.trust_level >=
-          this.siteSettings.anonymous_posting_min_trust_level) ||
-      this.currentUser.is_anonymous
+      this.currentUser.can_post_anonymously || this.currentUser.is_anonymous
     );
   }
 
@@ -25,6 +39,16 @@ export default class UserMenuProfileTabContent extends Component {
     return this.#doNotDisturbUntilDate.getTime();
   }
 
+  get showDoNotDisturbEndDate() {
+    return !DoNotDisturb.isEternal(
+      this.currentUser.get("do_not_disturb_until")
+    );
+  }
+
+  get extraItems() {
+    return _extraItems;
+  }
+
   get #doNotDisturbUntilDate() {
     if (!this.currentUser.get("do_not_disturb_until")) {
       return;
@@ -34,6 +58,10 @@ export default class UserMenuProfileTabContent extends Component {
       return;
     }
     return date;
+  }
+
+  get isPresenceHidden() {
+    return this.currentUser.get("user_option.hide_presence");
   }
 
   @action
@@ -49,16 +77,34 @@ export default class UserMenuProfileTabContent extends Component {
     } else {
       this.saving = false;
       this.args.closeUserMenu();
-      showModal("do-not-disturb");
+      this.modal.show(DoNotDisturbModal);
     }
+  }
+
+  @action
+  togglePresence() {
+    this.currentUser.set("user_option.hide_presence", !this.isPresenceHidden);
+    this.currentUser.save(["hide_presence"]);
   }
 
   @action
   setUserStatusClick() {
     this.args.closeUserMenu();
-    showModal("user-status", {
-      title: "user_status.set_custom_status",
-      modalClass: "user-status",
+
+    this.modal.show(UserStatusModal, {
+      model: {
+        status: this.currentUser.status,
+        pauseNotifications: this.currentUser.isInDoNotDisturb(),
+        saveAction: (status, pauseNotifications) =>
+          this.userStatus.set(status, pauseNotifications),
+        deleteAction: () => this.userStatus.clear(),
+      },
     });
+  }
+
+  @action
+  async toggleAnonymous() {
+    await ajax(userPath("toggle-anon"), { type: "POST" });
+    window.location.reload();
   }
 }

@@ -27,8 +27,6 @@ fa_IR:
         icons:
           title: "آیکون‌ها"
           full_list: "نمایش کامل لیست آیکون‌های فونت‌های بسیار جذاب"
-        input_fields:
-          title: "فیلدهای ورودی"
         buttons:
           title: "دکمه‌ها"
         dropdowns:
@@ -87,6 +85,8 @@ fa_IR:
           title: "اسپینرها"
         empty_state:
           title: "حالت خالی"
-        rich_tooltip:
-          description: "توضیحات"
+        tooltips:
+          description: "توضیح"
           header: "سربرگ"
+        char_counter:
+          placeholder: "متن خود را اینجا وارد کنید..."

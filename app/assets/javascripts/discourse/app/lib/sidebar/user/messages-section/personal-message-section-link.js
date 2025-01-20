@@ -1,14 +1,14 @@
-import I18n from "I18n";
-
 import MessageSectionLink from "discourse/lib/sidebar/user/messages-section/message-section-link";
+import { i18n } from "discourse-i18n";
 
 export default class PersonalMessageSectionLink extends MessageSectionLink {
   routeNames = new Set([
-    "userPrivateMessages.index",
-    "userPrivateMessages.unread",
-    "userPrivateMessages.sent",
-    "userPrivateMessages.new",
-    "userPrivateMessages.archive",
+    "userPrivateMessages.user",
+    "userPrivateMessages.user.index",
+    "userPrivateMessages.user.unread",
+    "userPrivateMessages.user.sent",
+    "userPrivateMessages.user.new",
+    "userPrivateMessages.user.archive",
   ]);
 
   get name() {
@@ -21,9 +21,9 @@ export default class PersonalMessageSectionLink extends MessageSectionLink {
 
   get route() {
     if (this._isInbox) {
-      return "userPrivateMessages.index";
+      return "userPrivateMessages.user.index";
     } else {
-      return `userPrivateMessages.${this.type}`;
+      return `userPrivateMessages.user.${this.type}`;
     }
   }
 
@@ -39,11 +39,11 @@ export default class PersonalMessageSectionLink extends MessageSectionLink {
 
   get text() {
     if (this.count > 0) {
-      return I18n.t(`sidebar.sections.messages.links.${this.type}_with_count`, {
+      return i18n(`sidebar.sections.messages.links.${this.type}_with_count`, {
         count: this.count,
       });
     } else {
-      return I18n.t(`sidebar.sections.messages.links.${this.type}`);
+      return i18n(`sidebar.sections.messages.links.${this.type}`);
     }
   }
 

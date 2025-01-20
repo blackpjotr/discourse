@@ -1,12 +1,12 @@
-import ReviewableTypeBase from "discourse/lib/reviewable-types/base";
 import { htmlSafe } from "@ember/template";
-import { escapeExpression } from "discourse/lib/utilities";
+import ReviewableTypeBase from "discourse/lib/reviewable-types/base";
 import { emojiUnescape } from "discourse/lib/text";
-import I18n from "I18n";
+import { escapeExpression } from "discourse/lib/utilities";
+import { i18n } from "discourse-i18n";
 
 export default class extends ReviewableTypeBase {
   get actor() {
-    return I18n.t("user_menu.reviewable.queue");
+    return i18n("user_menu.reviewable.queue");
   }
 
   get description() {
@@ -19,7 +19,7 @@ export default class extends ReviewableTypeBase {
       return htmlSafe(title);
     } else {
       return htmlSafe(
-        I18n.t("user_menu.reviewable.new_post_in_topic", {
+        i18n("user_menu.reviewable.new_post_in_topic", {
           title,
         })
       );

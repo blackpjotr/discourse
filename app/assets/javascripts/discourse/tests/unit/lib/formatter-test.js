@@ -1,3 +1,7 @@
+import { getOwner } from "@ember/owner";
+import { setupTest } from "ember-qunit";
+import { module, test } from "qunit";
+import domFromString from "discourse/lib/dom-from-string";
 import {
   autoUpdatingRelativeAge,
   duration,
@@ -8,15 +12,10 @@ import {
   until,
   updateRelativeAge,
 } from "discourse/lib/formatter";
-import {
-  discourseModule,
-  fakeTime,
-} from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
-import domFromString from "discourse-common/lib/dom-from-string";
+import { fakeTime } from "discourse/tests/helpers/qunit-helpers";
 
 function formatMins(mins, opts = {}) {
-  let dt = new Date(new Date() - mins * 60 * 1000);
+  const dt = new Date(new Date() - mins * 60 * 1000);
   return relativeAge(dt, {
     format: opts.format || "tiny",
     leaveAgo: opts.leaveAgo,
@@ -45,7 +44,9 @@ function strip(html) {
   return domFromString(html)[0].innerText;
 }
 
-discourseModule("Unit | Utility | formatter", function (hooks) {
+module("Unit | Utility | formatter", function (hooks) {
+  setupTest(hooks);
+
   hooks.beforeEach(function () {
     this.clock = fakeTime("2012-12-31 12:00");
   });
@@ -55,7 +56,7 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
   });
 
   test("formatting medium length dates", function (assert) {
-    let shortDateYear = shortDateTester("MMM D, 'YY");
+    const shortDateYear = shortDateTester("MMM D, YYYY");
 
     assert.strictEqual(
       strip(formatMins(1.4, { format: "medium", leaveAgo: true })),
@@ -124,16 +125,13 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
       shortDateYear(500)
     );
 
-    assert.strictEqual(
-      domFromString(formatDays(0, { format: "medium" }))[0].title,
-      longDate(new Date())
-    );
+    assert
+      .dom(domFromString(formatDays(0, { format: "medium" }))[0])
+      .hasAttribute("title", longDate(new Date()));
 
-    assert.ok(
-      domFromString(formatDays(0, { format: "medium" }))[0].classList.contains(
-        "date"
-      )
-    );
+    assert
+      .dom(domFromString(formatDays(0, { format: "medium" }))[0])
+      .hasClass("date");
 
     this.clock.restore();
     this.clock = fakeTime("2012-01-09 12:00");
@@ -149,7 +147,10 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
   });
 
   test("formatting tiny dates", function (assert) {
-    let shortDateYear = shortDateTester("MMM 'YY");
+    const siteSettings = getOwner(this).lookup("service:site-settings");
+
+    const shortDateYear = shortDateTester("MMM YYYY");
+    siteSettings.relative_date_duration = 14;
 
     assert.strictEqual(formatMins(0), "1m");
     assert.strictEqual(formatMins(1), "1m");
@@ -184,16 +185,16 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
     assert.strictEqual(formatDays(-500), shortDateYear(-500));
     assert.strictEqual(formatDays(-365 * 2 - 1), shortDateYear(-365 * 2 - 1)); // one leap year
 
-    let originalValue = this.siteSettings.relative_date_duration;
-    this.siteSettings.relative_date_duration = 7;
+    const originalValue = siteSettings.relative_date_duration;
+    siteSettings.relative_date_duration = 7;
     assert.strictEqual(formatDays(7), "7d");
     assert.strictEqual(formatDays(8), shortDate(8));
 
-    this.siteSettings.relative_date_duration = 1;
+    siteSettings.relative_date_duration = 1;
     assert.strictEqual(formatDays(1), "1d");
     assert.strictEqual(formatDays(2), shortDate(2));
 
-    this.siteSettings.relative_date_duration = 0;
+    siteSettings.relative_date_duration = 0;
     assert.strictEqual(formatMins(0), "1m");
     assert.strictEqual(formatMins(1), "1m");
     assert.strictEqual(formatMins(2), "2m");
@@ -202,12 +203,12 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
     assert.strictEqual(formatDays(2), shortDate(2));
     assert.strictEqual(formatDays(366), shortDateYear(366));
 
-    this.siteSettings.relative_date_duration = null;
+    siteSettings.relative_date_duration = null;
     assert.strictEqual(formatDays(1), "1d");
     assert.strictEqual(formatDays(14), "14d");
     assert.strictEqual(formatDays(15), shortDate(15));
 
-    this.siteSettings.relative_date_duration = 14;
+    siteSettings.relative_date_duration = 14;
 
     this.clock.restore();
     this.clock = fakeTime("2012-01-12 12:00");
@@ -224,19 +225,19 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
     assert.strictEqual(formatDays(15), shortDate(15));
     assert.strictEqual(formatDays(20), shortDateYear(20));
 
-    this.siteSettings.relative_date_duration = originalValue;
+    siteSettings.relative_date_duration = originalValue;
   });
 
   test("autoUpdatingRelativeAge", function (assert) {
-    let d = moment().subtract(1, "day").toDate();
+    const d = moment().subtract(1, "day").toDate();
 
     let elem = domFromString(autoUpdatingRelativeAge(d))[0];
     assert.strictEqual(elem.dataset.format, "tiny");
     assert.strictEqual(elem.dataset.time, d.getTime().toString());
-    assert.strictEqual(elem.title, "");
+    assert.dom(elem).doesNotHaveAttribute("title");
 
     elem = domFromString(autoUpdatingRelativeAge(d, { title: true }))[0];
-    assert.strictEqual(elem.title, longDate(d));
+    assert.dom(elem).hasAttribute("title", longDate(d));
 
     elem = domFromString(
       autoUpdatingRelativeAge(d, {
@@ -248,14 +249,17 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
 
     assert.strictEqual(elem.dataset.format, "medium-with-ago");
     assert.strictEqual(elem.dataset.time, d.getTime().toString());
-    assert.strictEqual(elem.title, longDate(d));
-    assert.strictEqual(elem.innerHTML, "1 day ago");
+    assert.dom(elem).hasAttribute("title", longDate(d));
+    assert.dom(elem).hasHtml("1 day ago");
 
     elem = domFromString(autoUpdatingRelativeAge(d, { format: "medium" }))[0];
     assert.strictEqual(elem.dataset.format, "medium");
     assert.strictEqual(elem.dataset.time, d.getTime().toString());
-    assert.strictEqual(elem.title, "");
-    assert.strictEqual(elem.innerHTML, "1 day");
+    assert.dom(elem).doesNotHaveAttribute("title");
+    assert.dom(elem).hasHtml("1 day");
+
+    elem = domFromString(autoUpdatingRelativeAge(d, { prefix: "test" }))[0];
+    assert.dom(elem).hasHtml("test 1d");
   });
 
   test("updateRelativeAge", function (assert) {
@@ -265,7 +269,7 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
 
     updateRelativeAge(elem);
 
-    assert.strictEqual(elem.innerHTML, "2m");
+    assert.dom(elem).hasHtml("2m");
 
     d = new Date();
     elem = domFromString(
@@ -275,7 +279,7 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
 
     updateRelativeAge(elem);
 
-    assert.strictEqual(elem.innerHTML, "2 mins ago");
+    assert.dom(elem).hasHtml("2 mins ago");
   });
 
   test("number", function (assert) {
@@ -474,25 +478,25 @@ discourseModule("Unit | Utility | formatter", function (hooks) {
   });
 });
 
-discourseModule("Unit | Utility | formatter | until", function (hooks) {
+module("Unit | Utility | formatter | until", function (hooks) {
+  setupTest(hooks);
+
   hooks.afterEach(function () {
-    if (this.clock) {
-      this.clock.restore();
-    }
+    this.clock?.restore();
   });
 
   test("shows time if until moment is today", function (assert) {
     const timezone = "UTC";
     this.clock = fakeTime("2100-01-01 12:00:00.000Z", timezone);
     const result = until("2100-01-01 13:00:00.000Z", timezone, "en");
-    assert.equal(result, "Until: 1:00 PM");
+    assert.strictEqual(result, "Until: 1:00 PM");
   });
 
   test("shows date if until moment is tomorrow", function (assert) {
     const timezone = "UTC";
     this.clock = fakeTime("2100-01-01 12:00:00.000Z", timezone);
     const result = until("2100-01-02 12:00:00.000Z", timezone, "en");
-    assert.equal(result, "Until: Jan 2");
+    assert.strictEqual(result, "Until: Jan 2");
   });
 
   test("shows until moment in user's timezone", function (assert) {
@@ -503,6 +507,6 @@ discourseModule("Unit | Utility | formatter | until", function (hooks) {
     this.clock = fakeTime("2100-01-01 12:00:00.000Z", timezone);
     const result = until(`2100-01-01 ${untilUTC}:00.000Z`, timezone, "en");
 
-    assert.equal(result, `Until: ${untilTbilisi}`);
+    assert.strictEqual(result, `Until: ${untilTbilisi}`);
   });
 });

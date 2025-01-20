@@ -1,5 +1,5 @@
-import I18n from "I18n";
 import { computed } from "@ember/object";
+import { i18n } from "discourse-i18n";
 
 let _topicFooterButtons = {};
 
@@ -51,6 +51,9 @@ export function registerTopicFooterButton(button) {
 
     // display order, higher comes first
     priority: 0,
+
+    // is this button displayed for anonymous users ?
+    anonymousOnly: false,
   };
 
   const normalizedButton = Object.assign(defaultButton, button);
@@ -100,12 +103,12 @@ export function getTopicFooterButtons() {
 
           const label = _compute(button, "label");
           discourseComputedButton.label = label
-            ? I18n.t(label)
+            ? i18n(label)
             : _compute(button, "translatedLabel");
 
           const ariaLabel = _compute(button, "ariaLabel");
           if (ariaLabel) {
-            discourseComputedButton.ariaLabel = I18n.t(ariaLabel);
+            discourseComputedButton.ariaLabel = i18n(ariaLabel);
           } else {
             const translatedAriaLabel = _compute(button, "translatedAriaLabel");
             discourseComputedButton.ariaLabel =
@@ -114,7 +117,7 @@ export function getTopicFooterButtons() {
 
           const title = _compute(button, "title");
           discourseComputedButton.title = title
-            ? I18n.t(title)
+            ? i18n(title)
             : _compute(button, "translatedTitle");
 
           discourseComputedButton.classNames = (
@@ -125,6 +128,11 @@ export function getTopicFooterButtons() {
           discourseComputedButton.disabled = _compute(button, "disabled");
           discourseComputedButton.dropdown = _compute(button, "dropdown");
           discourseComputedButton.priority = _compute(button, "priority");
+
+          discourseComputedButton.anonymousOnly = _compute(
+            button,
+            "anonymousOnly"
+          );
 
           if (_isFunction(button.action)) {
             discourseComputedButton.action = () => button.action.apply(this);

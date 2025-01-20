@@ -1,33 +1,31 @@
 # frozen_string_literal: true
 
 RSpec.describe Middleware::DiscoursePublicExceptions do
-  before do
-    @orig_logger = Rails.logger
-    Rails.logger = @fake_logger = FakeLogger.new
-  end
+  let(:fake_logger) { FakeLogger.new }
 
-  after do
-    Rails.logger = @orig_logger
-  end
+  before { Rails.logger.broadcast_to(fake_logger) }
+
+  after { Rails.logger.stop_broadcasting_to(fake_logger) }
 
   def env(opts = {})
     {
       "HTTP_HOST" => "http://test.com",
       "REQUEST_URI" => "/path?bla=1",
       "REQUEST_METHOD" => "GET",
-      "rack.input" => ""
+      "rack.input" => "",
     }.merge(opts)
   end
 
   it "should not log for invalid mime type requests" do
     ex = Middleware::DiscoursePublicExceptions.new("/test")
 
-    ex.call(env(
-      "HTTP_ACCEPT" => "../broken../",
-      "action_dispatch.exception" => ActionController::RoutingError.new("abc")
-    ))
+    ex.call(
+      env(
+        "HTTP_ACCEPT" => "../broken../",
+        "action_dispatch.exception" => ActionController::RoutingError.new("abc"),
+      ),
+    )
 
-    expect(@fake_logger.warnings.length).to eq(0)
+    expect(fake_logger.warnings.length).to eq(0)
   end
-
 end

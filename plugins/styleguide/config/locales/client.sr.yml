@@ -27,8 +27,6 @@ sr:
         icons:
           title: "Ikonice"
           full_list: "Pogledaj sve Font Awesome ikonice"
-        input_fields:
-          title: "Поља за унос"
         buttons:
           title: "Дугмад"
         dropdowns:
@@ -85,6 +83,6 @@ sr:
           title: "Ikonice zaglavlja"
         spinners:
           title: "Spineri"
-        rich_tooltip:
+        tooltips:
           description: "Opis"
           header: "Header"

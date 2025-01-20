@@ -1,7 +1,14 @@
 # frozen_string_literal: true
 
 class UserCardSerializer < BasicUserSerializer
+  include UserStatusMixin
+
   attr_accessor :topic_post_count
+
+  def initialize(object, options = {})
+    super
+    options[:include_status] = true
+  end
 
   def self.staff_attributes(*attrs)
     attributes(*attrs)
@@ -70,14 +77,9 @@ class UserCardSerializer < BasicUserSerializer
              :flair_color,
              :featured_topic,
              :timezone,
-             :pending_posts_count,
-             :status
+             :pending_posts_count
 
-  untrusted_attributes :bio_excerpt,
-                       :website,
-                       :website_name,
-                       :location,
-                       :card_background_upload_url
+  untrusted_attributes :bio_excerpt, :website, :website_name, :location, :card_background_upload_url
 
   staff_attributes :staged
 
@@ -91,8 +93,7 @@ class UserCardSerializer < BasicUserSerializer
   end
 
   def include_email?
-    (object.id && object.id == scope.user.try(:id)) ||
-      (scope.is_staff? && object.staged?)
+    (object.id && object.id == scope.user.try(:id)) || (scope.is_staff? && object.staged?)
   end
 
   alias_method :include_secondary_emails?, :include_email?
@@ -111,13 +112,14 @@ class UserCardSerializer < BasicUserSerializer
   end
 
   def website_name
-    uri = begin
-      URI(website.to_s)
-    rescue URI::Error
-    end
+    uri =
+      begin
+        URI(website.to_s)
+      rescue URI::Error
+      end
 
     return if uri.nil? || uri.host.nil?
-    uri.host.sub(/^www\./, '') + uri.path
+    uri.host.sub(/\Awww\./, "") + uri.path
   end
 
   def ignored
@@ -141,11 +143,11 @@ class UserCardSerializer < BasicUserSerializer
   # Needed because 'send_private_message_to_user' will always return false
   # when the current user is being serialized
   def can_send_private_messages
-    scope.can_send_private_message?(Discourse.system_user)
+    scope.can_send_private_messages?
   end
 
   def can_send_private_message_to_user
-    scope.can_send_private_message?(object) && scope.current_user != object
+    scope.can_send_private_message?(object)
   end
 
   def include_suspend_reason?
@@ -212,7 +214,7 @@ class UserCardSerializer < BasicUserSerializer
   end
 
   def featured_topic
-    object.user_profile.featured_topic
+    BasicTopicSerializer.new(object.user_profile.featured_topic, scope: scope, root: false).as_json
   end
 
   def include_timezone?
@@ -225,14 +227,6 @@ class UserCardSerializer < BasicUserSerializer
 
   def card_background_upload_url
     object.card_background_upload&.url
-  end
-
-  def include_status?
-    SiteSetting.enable_user_status && user.has_status?
-  end
-
-  def status
-    UserStatusSerializer.new(user.user_status, root: false)
   end
 
   private

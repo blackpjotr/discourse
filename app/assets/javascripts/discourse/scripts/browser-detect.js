@@ -1,7 +1,14 @@
 /* eslint-disable no-var */ // `let` is not supported in very old browsers
 
 (function () {
-  if (!window.WeakMap || !window.Promise || typeof globalThis === "undefined") {
+  if (
+    !window.WeakMap ||
+    !window.Promise ||
+    typeof globalThis === "undefined" ||
+    !String.prototype.replaceAll ||
+    !CSS.supports ||
+    !CSS.supports("aspect-ratio: 1")
+  ) {
     window.unsupportedBrowser = true;
   } else {
     // Some implementations of `WeakMap.prototype.has` do not accept false
@@ -9,6 +16,7 @@
     // checks for `null` and `undefined`).
     try {
       new WeakMap().has(0);
+      // eslint-disable-next-line no-unused-vars -- old browsers require binding this variable, even if unused
     } catch (err) {
       window.unsupportedBrowser = true;
     }

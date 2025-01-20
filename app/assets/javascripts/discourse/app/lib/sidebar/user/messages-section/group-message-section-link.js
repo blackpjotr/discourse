@@ -1,14 +1,13 @@
-import I18n from "I18n";
-
-import { capitalize } from "@ember/string";
 import MessageSectionLink from "discourse/lib/sidebar/user/messages-section/message-section-link";
+import { i18n } from "discourse-i18n";
 
 export default class GroupMessageSectionLink extends MessageSectionLink {
   routeNames = new Set([
     "userPrivateMessages.group",
-    "userPrivateMessages.groupUnread",
-    "userPrivateMessages.groupNew",
-    "userPrivateMessages.groupArchive",
+    "userPrivateMessages.group.index",
+    "userPrivateMessages.group.unread",
+    "userPrivateMessages.group.new",
+    "userPrivateMessages.group.archive",
   ]);
 
   get name() {
@@ -23,7 +22,7 @@ export default class GroupMessageSectionLink extends MessageSectionLink {
     if (this._isInbox) {
       return "userPrivateMessages.group";
     } else {
-      return `userPrivateMessages.group${capitalize(this.type)}`;
+      return `userPrivateMessages.group.${this.type}`;
     }
   }
 
@@ -41,15 +40,19 @@ export default class GroupMessageSectionLink extends MessageSectionLink {
     if (this._isInbox) {
       return this.group.name;
     } else if (this.count > 0) {
-      return I18n.t(`sidebar.sections.messages.links.${this.type}_with_count`, {
+      return i18n(`sidebar.sections.messages.links.${this.type}_with_count`, {
         count: this.count,
       });
     } else {
-      return I18n.t(`sidebar.sections.messages.links.${this.type}`);
+      return i18n(`sidebar.sections.messages.links.${this.type}`);
     }
   }
 
-  pageChanged({ currentRouteName, currentRouteParams, privateMessageTopic }) {
+  pageChanged({
+    currentRouteName,
+    currentRouteParentParams,
+    privateMessageTopic,
+  }) {
     if (this._isInbox) {
       return;
     }
@@ -65,6 +68,7 @@ export default class GroupMessageSectionLink extends MessageSectionLink {
 
     this.setDisplayState =
       this.routeNames.has(currentRouteName) &&
-      currentRouteParams.name.toLowerCase() === this.group.name.toLowerCase();
+      currentRouteParentParams.name.toLowerCase() ===
+        this.group.name.toLowerCase();
   }
 }

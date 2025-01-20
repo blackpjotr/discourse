@@ -1,10 +1,32 @@
+<DPageHeader
+  @titleLabel={{i18n "admin.watched_words.title"}}
+  @descriptionLabel={{i18n "admin.watched_words.description"}}
+  @learnMoreUrl="https://meta.discourse.org/t/241735"
+  @hideTabs={{true}}
+>
+  <:breadcrumbs>
+    <DBreadcrumbsItem @path="/admin" @label={{i18n "admin_title"}} />
+    <DBreadcrumbsItem
+      @path="/admin/customize/watched_words"
+      @label={{i18n "admin.watched_words.title"}}
+    />
+  </:breadcrumbs>
+</DPageHeader>
+
 <div class="admin-contents">
   <div class="admin-controls">
     <div class="controls">
       <div class="inline-form">
-        <DButton @action={{action "toggleMenu"}} @class="menu-toggle" @icon="bars" />
-        <TextField @value={{this.filter}} @placeholderKey="admin.watched_words.search" @class="no-blur" />
-        <DButton @action={{action "clearFilter"}} @label="admin.watched_words.clear_filter" />
+        <DButton @action={{this.toggleMenu}} @icon="bars" class="menu-toggle" />
+        <TextField
+          @value={{this.filter}}
+          @placeholderKey="admin.watched_words.search"
+          class="no-blur"
+        />
+        <DButton
+          @action={{this.clearFilter}}
+          @label="admin.watched_words.clear_filter"
+        />
       </div>
     </div>
   </div>
@@ -15,7 +37,9 @@
         <li class={{action.nameKey}}>
           <LinkTo @route="adminWatchedWords.action" @model={{action.nameKey}}>
             {{action.name}}
-            {{#if action.words}}<span class="count">({{action.words.length}})</span>{{/if}}
+            {{#if action.words}}<span
+                class="count"
+              >({{action.words.length}})</span>{{/if}}
           </LinkTo>
         </li>
       {{/each}}

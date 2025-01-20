@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 RSpec.describe Admin::UsersController do
   let(:admin) { Fabricate(:admin) }
 
   before { sign_in(admin) }
 
-  describe '#destroy' do
+  describe "#destroy" do
     let(:delete_me) { Fabricate(:user) }
 
     context "when user has voted" do

@@ -3,24 +3,22 @@
     width: unset;
   }
 
-  .panel-body {
-    max-height: calc(100vh - 100px);
+  &.drop-down {
+    .panel-body {
+      max-width: calc(100vw - 2em);
+    }
   }
 }
 
 // Sidebar-hamburger hybrid
 
 .hamburger-panel .revamped {
-  --d-sidebar-highlight-color: var(--highlight-medium);
+  --d-sidebar-highlight-background: var(--d-hover);
   --d-sidebar-row-horizontal-padding: 0.5rem;
-  width: var(--d-sidebar-width);
-
-  .sidebar-row {
-    padding: 0.25rem var(--d-sidebar-row-horizontal-padding);
-    height: 27px;
-    align-items: center;
-    font-size: var(--font-down-1);
-  }
+  --d-sidebar-row-height: 30px;
+  // 1.25rem gets text left-aligned with the hamburger icon
+  --d-sidebar-row-horizontal-padding: 0.66rem;
+  width: 360px;
 
   .panel-body-content {
     width: 100%;
@@ -34,12 +32,33 @@
 
     .sidebar-section-link.active {
       font-weight: normal;
-      color: var(--primary-high);
-      background: var(--tertiary-low);
+      background: var(--d-hover);
     }
 
     .sidebar-section-header-wrapper .select-kit .btn:hover {
       background: transparent;
+    }
+
+    &.sidebar-section {
+      padding-top: 0.5em;
+      .sidebar-section-header-wrapper {
+        margin: 0 0 0.5em;
+        padding-bottom: 0.25em;
+        .d-icon-globe {
+          color: var(--primary-medium);
+        }
+      }
+      ul {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        li {
+          min-width: 0;
+        }
+      }
+    }
+
+    .sidebar-section-message {
+      padding: 0;
     }
   }
 
@@ -51,11 +70,28 @@
 
   .sidebar-footer-wrapper {
     padding: 0;
+    margin-top: 1em;
     .sidebar-footer-container {
       padding: 0;
+      border: none;
+      background: var(--secondary);
       &:before {
-        top: calc(-100% + 2px);
+        top: -1.5em;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          rgba(var(--secondary-rgb), 1)
+        );
       }
+    }
+  }
+}
+
+.sidebar-hamburger-dropdown {
+  .discourse-no-touch & {
+    .sidebar-section-wrapper .sidebar-section-header-wrapper:hover,
+    .sidebar-section-wrapper .sidebar-section-header-wrapper:focus-within {
+      background: transparent;
     }
   }
 }

@@ -1,14 +1,7 @@
 import DiscourseRoute from "discourse/routes/discourse";
-import { action } from "@ember/object";
 
-export default DiscourseRoute.extend({
+export default class Exception extends DiscourseRoute {
   serialize() {
     return "";
-  },
-
-  @action
-  didTransition() {
-    this.controllerFor("application").set("showFooter", true);
-    return true;
-  },
-});
+  }
+}

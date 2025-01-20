@@ -6,21 +6,22 @@ module OneboxHelpers
     File.exist?(file) ? File.read(file) : ""
   end
 
-  def inspect_html_fragment(raw_fragment, tag_name, attribute = 'src')
+  def inspect_html_fragment(raw_fragment, tag_name, attribute = "src")
     preview = Nokogiri::HTML::DocumentFragment.parse(raw_fragment)
     preview.css(tag_name).first[attribute]
   end
 
   RSpec.shared_context "with engines" do
-    before do
-      fixture = defined?(@onebox_fixture) ? @onebox_fixture : described_class.onebox_name
-      stub_request(:get, defined?(@uri) ? @uri : @link).to_return(status: 200, body: onebox_response(fixture))
-    end
-
     let(:onebox) { described_class.new(link) }
     let(:html) { onebox.to_html }
-    let(:data) { Onebox::Helpers.symbolize_keys(onebox.send(:data)) }
+    let(:data) { onebox.send(:data).deep_symbolize_keys }
     let(:link) { @link }
+    let(:uri) { defined?(@uri) ? @uri : link }
+
+    before do
+      fixture = defined?(@onebox_fixture) ? @onebox_fixture : described_class.onebox_name
+      stub_request(:get, uri).to_return(status: 200, body: onebox_response(fixture))
+    end
   end
 
   RSpec.shared_examples_for "an engine" do

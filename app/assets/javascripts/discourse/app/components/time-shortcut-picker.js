@@ -1,20 +1,18 @@
-import { laterToday, now, parseCustomDatetime } from "discourse/lib/time-utils";
+import Component from "@ember/component";
+import { action } from "@ember/object";
+import { and, equal } from "@ember/object/computed";
+import { tagName } from "@ember-decorators/component";
+import { observes, on } from "@ember-decorators/object";
+import discourseComputed from "discourse/lib/decorators";
 import {
-  TIME_SHORTCUT_TYPES,
   defaultTimeShortcuts,
   formatTime,
   hideDynamicTimeShortcuts,
   specialShortcutOptions,
+  TIME_SHORTCUT_TYPES,
 } from "discourse/lib/time-shortcut";
-import discourseComputed, {
-  observes,
-  on,
-} from "discourse-common/utils/decorators";
-
-import Component from "@ember/component";
-import I18n from "I18n";
-import { action } from "@ember/object";
-import { and, equal } from "@ember/object/computed";
+import { laterToday, now, parseCustomDatetime } from "discourse/lib/time-utils";
+import { i18n } from "discourse-i18n";
 
 const BINDINGS = {
   "l t": {
@@ -41,34 +39,39 @@ const BINDINGS = {
   "n r": { handler: "selectShortcut", args: [TIME_SHORTCUT_TYPES.NONE] },
 };
 
-export default Component.extend({
-  tagName: "",
+@tagName("")
+export default class TimeShortcutPicker extends Component {
+  @equal("selectedShortcut", TIME_SHORTCUT_TYPES.CUSTOM) customDatetimeSelected;
+  @equal("selectedShortcut", TIME_SHORTCUT_TYPES.RELATIVE)
+  relativeTimeSelected;
+  @and("customDate", "customTime") customDatetimeFilled;
 
-  userTimezone: null,
+  userTimezone = null;
 
-  onTimeSelected: null,
+  onTimeSelected = null;
 
-  selectedShortcut: null,
-  selectedTime: null,
-  selectedDate: null,
-  selectedDatetime: null,
-  prefilledDatetime: null,
+  selectedShortcut = null;
+  selectedTime = null;
+  selectedDate = null;
+  selectedDatetime = null;
+  prefilledDatetime = null;
+  selectedDurationMins = null;
 
-  hiddenOptions: null,
-  customOptions: null,
+  hiddenOptions = null;
+  customOptions = null;
 
-  lastCustomDate: null,
-  lastCustomTime: null,
-  parsedLastCustomDatetime: null,
-  customDate: null,
-  customTime: null,
+  lastCustomDate = null;
+  lastCustomTime = null;
+  parsedLastCustomDatetime = null;
+  customDate = null;
+  customTime = null;
 
-  _itsatrap: null,
+  _itsatrap = null;
 
   @on("init")
   _setupPicker() {
     this.setProperties({
-      userTimezone: this.currentUser.timezone,
+      userTimezone: this.currentUser.user_option.timezone,
       hiddenOptions: this.hiddenOptions || [],
       customOptions: this.customOptions || [],
       customLabels: this.customLabels || {},
@@ -79,7 +82,7 @@ export default Component.extend({
     }
 
     this._bindKeyboardShortcuts();
-  },
+  }
 
   @observes("prefilledDatetime")
   prefilledDatetimeChanged() {
@@ -92,13 +95,13 @@ export default Component.extend({
         selectedShortcut: null,
       });
     }
-  },
+  }
 
   willDestroyElement() {
-    this._super(...arguments);
+    super.willDestroyElement(...arguments);
 
     this._itsatrap.unbind(Object.keys(BINDINGS));
-  },
+  }
 
   parsePrefilledDatetime() {
     let parsedDatetime = parseCustomDatetime(
@@ -116,7 +119,7 @@ export default Component.extend({
       customTime: parsedDatetime.format("HH:mm"),
       selectedShortcut: TIME_SHORTCUT_TYPES.CUSTOM,
     });
-  },
+  }
 
   _loadLastUsedCustomDatetime() {
     const lastTime = this.keyValueStore.lastCustomTime;
@@ -135,7 +138,7 @@ export default Component.extend({
         parsedLastCustomDatetime: parsed,
       });
     }
-  },
+  }
 
   _bindKeyboardShortcuts() {
     Object.keys(BINDINGS).forEach((shortcut) => {
@@ -145,11 +148,7 @@ export default Component.extend({
         return false;
       });
     });
-  },
-
-  customDatetimeSelected: equal("selectedShortcut", TIME_SHORTCUT_TYPES.CUSTOM),
-  relativeTimeSelected: equal("selectedShortcut", TIME_SHORTCUT_TYPES.RELATIVE),
-  customDatetimeFilled: and("customDate", "customTime"),
+  }
 
   @observes("customDate", "customTime")
   customDatetimeChanged() {
@@ -157,7 +156,7 @@ export default Component.extend({
       return;
     }
     this.selectShortcut(TIME_SHORTCUT_TYPES.CUSTOM);
-  },
+  }
 
   @discourseComputed(
     "timeShortcuts",
@@ -203,18 +202,19 @@ export default Component.extend({
     this._applyCustomLabels(options, customLabels);
     options.forEach((o) => (o.timeFormatted = formatTime(o)));
     return options;
-  },
+  }
 
   @action
   relativeTimeChanged(relativeTimeMins) {
-    let dateTime = now(this.userTimezone).add(relativeTimeMins, "minutes");
+    const dateTime = now(this.userTimezone).add(relativeTimeMins, "minutes");
 
-    this.set("selectedDatetime", dateTime);
+    this.setProperties({
+      selectedDurationMins: relativeTimeMins,
+      selectedDatetime: dateTime,
+    });
 
-    if (this.onTimeSelected) {
-      this.onTimeSelected(TIME_SHORTCUT_TYPES.RELATIVE, dateTime);
-    }
-  },
+    this.onTimeSelected?.(TIME_SHORTCUT_TYPES.RELATIVE, dateTime);
+  }
 
   @action
   selectShortcut(type) {
@@ -258,7 +258,7 @@ export default Component.extend({
     if (this.onTimeSelected) {
       this.onTimeSelected(type, dateTime);
     }
-  },
+  }
 
   _applyCustomLabels(options, customLabels) {
     options.forEach((option) => {
@@ -266,17 +266,17 @@ export default Component.extend({
         option.label = customLabels[option.id];
       }
     });
-  },
+  }
 
   _formatTime(options) {
     options.forEach((option) => {
       if (option.time && option.timeFormatKey) {
-        option.timeFormatted = option.time.format(I18n.t(option.timeFormatKey));
+        option.timeFormatted = option.time.format(i18n(option.timeFormatKey));
       }
     });
-  },
+  }
 
   _defaultCustomDateTime() {
     return moment.tz(this.userTimezone).add(1, "hour");
-  },
-});
+  }
+}

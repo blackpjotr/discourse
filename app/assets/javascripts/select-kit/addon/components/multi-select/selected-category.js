@@ -1,19 +1,18 @@
-import SelectedNameComponent from "select-kit/components/selected-name";
-import { categoryBadgeHTML } from "discourse/helpers/category-link";
 import { computed } from "@ember/object";
-import layout from "select-kit/templates/components/multi-select/selected-category";
 import { htmlSafe } from "@ember/template";
+import { classNames } from "@ember-decorators/component";
+import { categoryBadgeHTML } from "discourse/helpers/category-link";
+import SelectedNameComponent from "select-kit/components/selected-name";
 
-export default SelectedNameComponent.extend({
-  classNames: ["selected-category"],
-  layout,
-
-  badge: computed("item", function () {
+@classNames("selected-category")
+export default class SelectedCategory extends SelectedNameComponent {
+  @computed("item")
+  get badge() {
     return htmlSafe(
       categoryBadgeHTML(this.item, {
         allowUncategorized: true,
         link: false,
       })
     );
-  }),
-});
+  }
+}

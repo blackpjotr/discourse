@@ -1,7 +1,7 @@
-import { module, test } from "qunit";
-import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import { click, render } from "@ember/test-helpers";
 import { hbs } from "ember-cli-htmlbars";
+import { module, test } from "qunit";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
 import selectKit from "discourse/tests/helpers/select-kit-helper";
 
 const DEFAULT_CONTENT = [
@@ -49,25 +49,21 @@ module("Integration | Component | select-kit/combo-box", function (hooks) {
 
     const header = this.subject.header();
 
-    assert.ok(
-      header.el().querySelector(".btn-clear"),
-      "it shows the clear button"
-    );
+    assert.dom(".btn-clear", header.el()).exists("shows the clear button");
     assert.strictEqual(header.value(), DEFAULT_VALUE.toString());
 
     await click(header.el().querySelector(".btn-clear"));
 
-    assert.notOk(
-      header.el().querySelector(".btn-clear"),
-      "it hides the clear button"
-    );
+    assert
+      .dom(".btn-clear", header.el())
+      .doesNotExist("hides the clear button");
     assert.strictEqual(header.value(), null);
   });
 
   test("options.{caretUpIcon,caretDownIcon}", async function (assert) {
     setDefaultState(this, {
-      caretUpIcon: "pencil-alt",
-      caretDownIcon: "trash-alt",
+      caretUpIcon: "pencil",
+      caretDownIcon: "trash-can",
     });
 
     await render(hbs`
@@ -75,24 +71,22 @@ module("Integration | Component | select-kit/combo-box", function (hooks) {
         @value={{this.value}}
         @content={{this.content}}
         @options={{hash
-          caretUpIcon=caretUpIcon
-          caretDownIcon=caretDownIcon
+          caretUpIcon=this.caretUpIcon
+          caretDownIcon=this.caretDownIcon
         }}
       />
     `);
 
     const header = this.subject.header().el();
 
-    assert.ok(
-      header.querySelector(`.d-icon-${this.caretDownIcon}`),
-      "it uses the icon provided"
-    );
+    assert
+      .dom(`.d-icon-${this.caretDownIcon}`, header)
+      .exists("uses the icon provided");
 
     await this.subject.expand();
 
-    assert.ok(
-      header.querySelector(`.d-icon-${this.caretUpIcon}`),
-      "it uses the icon provided"
-    );
+    assert
+      .dom(`.d-icon-${this.caretUpIcon}`, header)
+      .exists("uses the icon provided");
   });
 });

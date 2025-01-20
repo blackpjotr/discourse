@@ -1,5 +1,6 @@
-import { isLTR, isRTL, setTextDirections } from "discourse/lib/text-direction";
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
+import { isLTR, isRTL, setTextDirections } from "discourse/lib/text-direction";
 
 function quoteHtml() {
   return `
@@ -26,28 +27,26 @@ function quoteHtml() {
   `;
 }
 
-function assertDirection(assert, elem, expected, message) {
-  assert.strictEqual(elem.getAttribute("dir"), expected, message);
-}
+module("Unit | Utility | text-direction", function (hooks) {
+  setupTest(hooks);
 
-module("Unit | Utility | text-direction", function () {
   test("isRTL", function (assert) {
     // Hebrew
-    assert.strictEqual(isRTL("זה מבחן"), true);
+    assert.true(isRTL("זה מבחן"));
 
     // Arabic
-    assert.strictEqual(isRTL("هذا اختبار"), true);
+    assert.true(isRTL("هذا اختبار"));
 
     // Persian
-    assert.strictEqual(isRTL("این یک امتحان است"), true);
+    assert.true(isRTL("این یک امتحان است"));
 
-    assert.strictEqual(isRTL("This is a test"), false);
-    assert.strictEqual(isRTL(""), false);
+    assert.false(isRTL("This is a test"));
+    assert.false(isRTL(""));
   });
 
   test("isLTR", function (assert) {
-    assert.strictEqual(isLTR("This is a test"), true);
-    assert.strictEqual(isLTR("זה מבחן"), false);
+    assert.true(isLTR("This is a test"));
+    assert.false(isLTR("זה מבחן"));
   });
 
   test("setTextDirections", function (assert) {
@@ -59,18 +58,20 @@ module("Unit | Utility | text-direction", function () {
     const [englishTitle, arabicTitle] = Array.from(
       cooked.querySelectorAll(".title")
     );
-    assertDirection(
-      assert,
-      englishTitle,
-      "ltr",
-      "quote title always matches site direction regardless of its content"
-    );
-    assertDirection(
-      assert,
-      arabicTitle,
-      "ltr",
-      "quote title always matches site direction regardless of its content"
-    );
+    assert
+      .dom(englishTitle)
+      .hasAttribute(
+        "dir",
+        "ltr",
+        "quote title always matches site direction regardless of its content"
+      );
+    assert
+      .dom(arabicTitle)
+      .hasAttribute(
+        "dir",
+        "ltr",
+        "quote title always matches site direction regardless of its content"
+      );
 
     const [
       quotedRtl,
@@ -81,41 +82,39 @@ module("Unit | Utility | text-direction", function () {
       notQuotedRtl,
     ] = Array.from(cooked.querySelectorAll("p"));
 
-    assertDirection(
-      assert,
-      quotedRtl,
-      "rtl",
-      "RTL paragraphs inside quote have rtl dir"
-    );
-    assertDirection(
-      assert,
-      quotedLtr,
-      "ltr",
-      "LTR paragraphs inside quote have ltr dir"
-    );
-    assertDirection(
-      assert,
-      quotedLtrNested,
-      "ltr",
-      "LTR paragraphs inside nested quote have ltr dir"
-    );
-    assertDirection(
-      assert,
-      quotedRtlNested,
-      "rtl",
-      "RTL paragraphs inside nested quote have rtl dir"
-    );
-    assertDirection(
-      assert,
-      notQuotedLtr,
-      "ltr",
-      "LTR paragraphs outside quotes have ltr dir"
-    );
-    assertDirection(
-      assert,
-      notQuotedRtl,
-      "rtl",
-      "RTL paragraphs outside quotes have rtl dir"
-    );
+    assert
+      .dom(quotedRtl)
+      .hasAttribute("dir", "auto", "RTL paragraphs inside quote have auto dir");
+    assert
+      .dom(quotedLtr)
+      .hasAttribute("dir", "auto", "LTR paragraphs inside quote have auto dir");
+    assert
+      .dom(quotedLtrNested)
+      .hasAttribute(
+        "dir",
+        "auto",
+        "LTR paragraphs inside nested quote have auto dir"
+      );
+    assert
+      .dom(quotedRtlNested)
+      .hasAttribute(
+        "dir",
+        "auto",
+        "RTL paragraphs inside nested quote have auto dir"
+      );
+    assert
+      .dom(notQuotedLtr)
+      .hasAttribute(
+        "dir",
+        "auto",
+        "LTR paragraphs outside quotes have auto dir"
+      );
+    assert
+      .dom(notQuotedRtl)
+      .hasAttribute(
+        "dir",
+        "auto",
+        "RTL paragraphs outside quotes have auto dir"
+      );
   });
 });

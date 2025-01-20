@@ -1,24 +1,35 @@
 # frozen_string_literal: true
 
 RSpec.describe UserSearch do
-
   before_all { SearchIndexer.enable } # Enable for prefabrication
   before { SearchIndexer.enable } # Enable for each test
 
-  fab!(:topic)     { Fabricate :topic }
-  fab!(:topic2)    { Fabricate :topic }
-  fab!(:topic3)    { Fabricate :topic }
-  fab!(:topic4)    { Fabricate :topic }
-  fab!(:mr_b)      { Fabricate :user, username: "mrb",      name: "Michael Madsen",    last_seen_at: 10.days.ago }
-  fab!(:mr_blue)   { Fabricate :user, username: "mrblue",   name: "Eddie Code",        last_seen_at: 9.days.ago }
-  fab!(:mr_orange) { Fabricate :user, username: "mrorange", name: "Tim Roth",          last_seen_at: 8.days.ago }
-  fab!(:mr_pink)   { Fabricate :user, username: "mrpink",   name: "Steve Buscemi",     last_seen_at: 7.days.ago }
-  fab!(:mr_brown)  { Fabricate :user, username: "mrbrown",  name: "Quentin Tarantino", last_seen_at: 6.days.ago }
-  fab!(:mr_white)  { Fabricate :user, username: "mrwhite",  name: "Harvey Keitel",     last_seen_at: 5.days.ago }
-  fab!(:inactive)  { Fabricate :user, username: "Ghost", active: false }
-  fab!(:admin)     { Fabricate :admin, username: "theadmin" }
+  fab!(:topic)
+  fab!(:topic2) { Fabricate :topic }
+  fab!(:topic3) { Fabricate :topic }
+  fab!(:topic4) { Fabricate :topic }
+  fab!(:mr_b) do
+    Fabricate :user, username: "mrb", name: "Michael Madsen", last_seen_at: 10.days.ago
+  end
+  fab!(:mr_blue) do
+    Fabricate :user, username: "mrblue", name: "Eddie Code", last_seen_at: 9.days.ago
+  end
+  fab!(:mr_orange) do
+    Fabricate :user, username: "mrorange", name: "Tim Roth", last_seen_at: 8.days.ago
+  end
+  fab!(:mr_pink) do
+    Fabricate :user, username: "mrpink", name: "Steve Buscemi", last_seen_at: 7.days.ago
+  end
+  fab!(:mr_brown) do
+    Fabricate :user, username: "mrbrown", name: "Quentin Tarantino", last_seen_at: 6.days.ago
+  end
+  fab!(:mr_white) do
+    Fabricate :user, username: "mrwhite", name: "Harvey Keitel", last_seen_at: 5.days.ago
+  end
+  fab!(:inactive) { Fabricate :user, username: "Ghost", active: false }
+  fab!(:admin) { Fabricate :admin, username: "theadmin" }
   fab!(:moderator) { Fabricate :moderator, username: "themod" }
-  fab!(:staged)    { Fabricate :staged }
+  fab!(:staged)
 
   def search_for(*args)
     # mapping "username" so it's easier to debug
@@ -26,9 +37,9 @@ RSpec.describe UserSearch do
   end
 
   context "with a secure category" do
-    fab!(:user) { Fabricate(:user) }
+    fab!(:user)
     fab!(:searching_user) { Fabricate(:user) }
-    fab!(:group) { Fabricate(:group) }
+    fab!(:group)
     fab!(:category) { Fabricate(:category, read_restricted: true, user: user) }
 
     before_all do
@@ -68,7 +79,6 @@ RSpec.describe UserSearch do
       results = search_for("", searching_user: searching_user, category_id: category.id)
       expect(results).to eq [user.username]
     end
-
   end
 
   it "allows for correct underscore searching" do
@@ -181,17 +191,16 @@ RSpec.describe UserSearch do
     end
 
     it "only reveals topic participants to people with permission" do
-      pm_topic = Fabricate(:private_message_post).topic
+      pm_topic =
+        Fabricate(:private_message_post, user: Fabricate(:user, refresh_auto_groups: true)).topic
 
       # Anonymous, does not have access
-      expect do
-        search_for("", topic_id: pm_topic.id)
-      end.to raise_error(Discourse::InvalidAccess)
+      expect do search_for("", topic_id: pm_topic.id) end.to raise_error(Discourse::InvalidAccess)
 
       # Random user, does not have access
-      expect do
-        search_for("", topic_id: pm_topic.id, searching_user: mr_b)
-      end.to raise_error(Discourse::InvalidAccess)
+      expect do search_for("", topic_id: pm_topic.id, searching_user: mr_b) end.to raise_error(
+        Discourse::InvalidAccess,
+      )
 
       pm_topic.invite(pm_topic.user, mr_b.username)
 
@@ -217,6 +226,18 @@ RSpec.describe UserSearch do
       expect(results).to be_blank
     end
 
+    it "does not show unapproved users when must_approve_users enabled" do
+      SiteSetting.must_approve_users = true
+      unapproved = Fabricate(:user, username: "mrunapproved", active: true, approved: false)
+      approved = Fabricate(:user, username: "mrapproved", active: true, approved: true)
+
+      users = search_for(unapproved.username)
+      expect(users).to be_blank
+
+      users = search_for(approved.username)
+      expect(users).not_to be_blank
+    end
+
     it "prioritises exact matches" do
       results = search_for("mrB")
       expect(results).to eq [mr_b, mr_brown, mr_blue].map(&:username)
@@ -224,9 +245,9 @@ RSpec.describe UserSearch do
 
     it "doesn't prioritises exact matches mentions for users who haven't been seen in over a year" do
       abcdef = Fabricate(:user, username: "abcdef", last_seen_at: 2.days.ago)
-      abcde  = Fabricate(:user, username: "abcde", last_seen_at: 2.weeks.ago)
-      abcd   = Fabricate(:user, username: "abcd", last_seen_at: 2.months.ago)
-      abc    = Fabricate(:user, username: "abc", last_seen_at: 2.years.ago)
+      abcde = Fabricate(:user, username: "abcde", last_seen_at: 2.weeks.ago)
+      abcd = Fabricate(:user, username: "abcd", last_seen_at: 2.months.ago)
+      abc = Fabricate(:user, username: "abc", last_seen_at: 2.years.ago)
 
       results = search_for("abc", topic_id: topic.id)
       expect(results).to eq [abcdef, abcde, abcd, abc].map(&:username)

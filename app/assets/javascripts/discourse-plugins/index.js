@@ -7,6 +7,8 @@ const mergeTrees = require("broccoli-merge-trees");
 const fs = require("fs");
 const concat = require("broccoli-concat");
 const RawHandlebarsCompiler = require("discourse-hbr/raw-handlebars-compiler");
+const DiscoursePluginColocatedTemplateProcessor = require("./colocated-template-compiler");
+const EmberApp = require("ember-cli/lib/broccoli/ember-app");
 
 function fixLegacyExtensions(tree) {
   return new Funnel(tree, {
@@ -14,8 +16,20 @@ function fixLegacyExtensions(tree) {
       if (relativePath.endsWith(".es6")) {
         return relativePath.slice(0, -4);
       } else if (relativePath.endsWith(".raw.hbs")) {
-        return relativePath.replace(".raw.hbs", ".hbr");
+        relativePath = relativePath.replace(".raw.hbs", ".hbr");
       }
+
+      if (relativePath.endsWith(".hbr")) {
+        if (relativePath.includes("/templates/")) {
+          relativePath = relativePath.replace("/templates/", "/raw-templates/");
+        } else if (relativePath.includes("/connectors/")) {
+          relativePath = relativePath.replace(
+            "/connectors/",
+            "/raw-templates/connectors/"
+          );
+        }
+      }
+
       return relativePath;
     },
   });
@@ -34,7 +48,7 @@ function unColocateConnectors(tree) {
       if (
         match &&
         match.groups.extension === "hbs" &&
-        !match.groups.prefix.endsWith("/templates")
+        match.groups.prefix.split("/").pop() !== "templates"
       ) {
         const { prefix, outlet, name } = match.groups;
         return `${prefix}/templates/connectors/${outlet}/${name}.hbs`;
@@ -42,7 +56,7 @@ function unColocateConnectors(tree) {
       if (
         match &&
         match.groups.extension === "js" &&
-        match.groups.prefix.endsWith("/templates")
+        match.groups.prefix.split("/").pop() === "templates"
       ) {
         // Some plugins are colocating connector JS under `/templates`
         const { prefix, outlet, name } = match.groups;
@@ -54,10 +68,10 @@ function unColocateConnectors(tree) {
   });
 }
 
-function namespaceModules(tree, pluginDirectoryName) {
+function namespaceModules(tree, pluginName) {
   return new Funnel(tree, {
     getDestinationPath: function (relativePath) {
-      return `discourse/plugins/${pluginDirectoryName}/${relativePath}`;
+      return `discourse/plugins/${pluginName}/${relativePath}`;
     },
   });
 }
@@ -80,6 +94,14 @@ function parsePluginName(pluginRbPath) {
 
 module.exports = {
   name: require("./package").name,
+
+  options: {
+    ...require("../discourse/lib/common-babel-config")(),
+
+    "ember-this-fallback": {
+      enableLogging: false,
+    },
+  },
 
   pluginInfos() {
     const root = path.resolve("../../../../plugins");
@@ -112,27 +134,38 @@ module.exports = {
         directoryName,
         "test/javascripts"
       );
+      const configDirectory = path.resolve(root, directoryName, "config");
       const hasJs = fs.existsSync(jsDirectory);
       const hasAdminJs = fs.existsSync(adminJsDirectory);
       const hasTests = fs.existsSync(testDirectory);
+      const hasConfig = fs.existsSync(configDirectory);
       return {
         pluginName,
         directoryName,
         jsDirectory,
         adminJsDirectory,
         testDirectory,
+        configDirectory,
         hasJs,
         hasAdminJs,
         hasTests,
+        hasConfig,
       };
     });
   },
 
-  generatePluginsTree() {
-    const appTree = this._generatePluginAppTree();
-    const testTree = this._generatePluginTestTree();
-    const adminTree = this._generatePluginAdminTree();
-    return mergeTrees([appTree, testTree, adminTree]);
+  generatePluginsTree(withTests) {
+    if (!this.shouldLoadPlugins()) {
+      return mergeTrees([]);
+    }
+    const trees = [
+      this._generatePluginAppTree(),
+      this._generatePluginAdminTree(),
+    ];
+    if (withTests) {
+      trees.push(this._generatePluginTestTree());
+    }
+    return mergeTrees(trees);
   },
 
   _generatePluginAppTree() {
@@ -169,6 +202,16 @@ module.exports = {
     tree = namespaceModules(tree, pluginName);
 
     tree = RawHandlebarsCompiler(tree);
+
+    const colocateBase = `discourse/plugins/${pluginName}`;
+    tree = new DiscoursePluginColocatedTemplateProcessor(
+      tree,
+      `${colocateBase}/discourse`
+    );
+    tree = new DiscoursePluginColocatedTemplateProcessor(
+      tree,
+      `${colocateBase}/admin`
+    );
     tree = this.compileTemplates(tree);
 
     tree = this.processedAddonJsFiles(tree);
@@ -206,8 +249,84 @@ module.exports = {
     return true;
   },
 
-  treeFor() {
-    // This addon doesn't contribute any 'real' trees to the app
-    return;
+  // Matches logic from GlobalSetting.load_plugins? in the ruby app
+  shouldLoadPlugins() {
+    if (process.env.LOAD_PLUGINS === "1") {
+      return true;
+    } else if (process.env.LOAD_PLUGINS === "0") {
+      return false;
+    } else if (EmberApp.env() === "test") {
+      return false;
+    } else {
+      return true;
+    }
+  },
+
+  pluginScriptTags(config) {
+    const scripts = [];
+
+    const pluginInfos = this.pluginInfos();
+
+    for (const {
+      pluginName,
+      directoryName,
+      hasJs,
+      hasAdminJs,
+    } of pluginInfos) {
+      if (hasJs) {
+        scripts.push({
+          src: `plugins/${directoryName}.js`,
+          name: pluginName,
+        });
+      }
+
+      if (fs.existsSync(`../plugins/${directoryName}_extras.js.erb`)) {
+        scripts.push({
+          src: `plugins/${directoryName}_extras.js`,
+          name: pluginName,
+        });
+      }
+
+      if (hasAdminJs) {
+        scripts.push({
+          src: `plugins/${directoryName}_admin.js`,
+          name: pluginName,
+        });
+      }
+    }
+
+    return scripts
+      .map(
+        ({ src, name }) =>
+          `<script src="${config.rootURL}assets/${src}" data-discourse-plugin="${name}"></script>`
+      )
+      .join("\n");
+  },
+
+  pluginTestScriptTags(config) {
+    return this.pluginInfos()
+      .filter(({ hasTests }) => hasTests)
+      .map(
+        ({ directoryName, pluginName }) =>
+          `<script src="${config.rootURL}assets/plugins/test/${directoryName}_tests.js" data-discourse-plugin="${pluginName}"></script>`
+      )
+      .join("\n");
+  },
+
+  contentFor(type, config) {
+    if (!this.shouldLoadPlugins()) {
+      return;
+    }
+
+    switch (type) {
+      case "test-plugin-js":
+        return this.pluginScriptTags(config);
+
+      case "test-plugin-tests-js":
+        return this.pluginTestScriptTags(config);
+
+      case "test-plugin-css":
+        return `<link rel="stylesheet" href="${config.rootURL}bootstrap/plugin-css-for-tests.css" data-discourse-plugin="_all" />`;
+    }
   },
 };

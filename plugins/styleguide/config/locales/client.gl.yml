@@ -27,8 +27,6 @@ gl:
         icons:
           title: "Iconas"
           full_list: "Vexa a listaxe completa das iconas dos tipos de letra"
-        input_fields:
-          title: "Campos de entrada"
         buttons:
           title: "Botóns"
         dropdowns:
@@ -85,6 +83,6 @@ gl:
           title: "Iconas de cabeceira"
         spinners:
           title: "Indicador de carga"
-        rich_tooltip:
+        tooltips:
           description: "Descrición"
           header: "Cabeceira"

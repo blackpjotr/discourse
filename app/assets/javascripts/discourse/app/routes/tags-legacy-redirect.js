@@ -1,7 +1,13 @@
 import Route from "@ember/routing/route";
+import { service } from "@ember/service";
 
-export default Route.extend({
+export default class TagsLegacyRedirect extends Route {
+  @service router;
+
   beforeModel() {
-    this.transitionTo("tag.show", this.paramsFor("tags.legacyRedirect").tag_id);
-  },
-});
+    this.router.transitionTo(
+      "tag.show",
+      this.paramsFor("tags.legacyRedirect").tag_id
+    );
+  }
+}

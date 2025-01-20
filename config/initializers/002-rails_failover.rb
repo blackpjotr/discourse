@@ -14,16 +14,12 @@ if defined?(RailsFailover::Redis)
     Discourse.request_refresh!
     MessageBus.keepalive_interval = message_bus_keepalive_interval
 
-    ObjectSpace.each_object(DistributedCache) do |cache|
-      cache.clear
-    end
+    ObjectSpace.each_object(DistributedCache) { |cache| cache.clear }
 
     SiteSetting.refresh!
   end
 
-  if Rails.logger.respond_to? :chained
-    RailsFailover::Redis.logger = Rails.logger.chained.first
-  end
+  RailsFailover::Redis.logger = Rails.logger.broadcasts.first
 end
 
 if defined?(RailsFailover::ActiveRecord)
@@ -48,7 +44,7 @@ if defined?(RailsFailover::ActiveRecord)
 
       # Test connection to the master, and trigger master failover if needed
       ActiveRecord::Base.connected_to(role: ActiveRecord.writing_role) do
-        ActiveRecord::Base.connection.active?
+        ActiveRecord::Base.connection.connect!.active?
       rescue PG::ConnectionBad, PG::UnableToSend, PG::ServerError
         RailsFailover::ActiveRecord.verify_primary(ActiveRecord.writing_role)
       end
@@ -73,10 +69,11 @@ if defined?(RailsFailover::ActiveRecord)
   end
 
   RailsFailover::ActiveRecord.register_force_reading_role_callback do
-    Discourse.redis.exists?(
-      Discourse::PG_READONLY_MODE_KEY,
-      Discourse::PG_FORCE_READONLY_MODE_KEY
-    )
+    GlobalSetting.pg_force_readonly_mode ||
+      Discourse.redis.exists?(
+        Discourse::PG_READONLY_MODE_KEY,
+        Discourse::PG_FORCE_READONLY_MODE_KEY,
+      )
   rescue => e
     if !e.is_a?(Redis::CannotConnectError)
       Rails.logger.warn "#{e.class} #{e.message}: #{e.backtrace.join("\n")}"

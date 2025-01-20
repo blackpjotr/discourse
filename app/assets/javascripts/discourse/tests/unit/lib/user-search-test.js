@@ -1,9 +1,12 @@
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
-import pretender, { response } from "discourse/tests/helpers/create-pretender";
 import { CANCELLED_STATUS } from "discourse/lib/autocomplete";
 import userSearch from "discourse/lib/user-search";
+import pretender, { response } from "discourse/tests/helpers/create-pretender";
 
 module("Unit | Utility | user-search", function (hooks) {
+  setupTest(hooks);
+
   hooks.beforeEach(function () {
     pretender.get("/u/search/users", (request) => {
       // special responder for per category search
@@ -173,5 +176,10 @@ module("Unit | Utility | user-search", function (hooks) {
       allowEmails: true,
     });
     assert.strictEqual(results.length, 1);
+  });
+
+  test("it uses limit option", async function (assert) {
+    const results = await userSearch({ term: "te", limit: 2 });
+    assert.strictEqual(results.length, 2);
   });
 });

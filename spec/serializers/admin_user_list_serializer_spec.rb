@@ -1,18 +1,14 @@
 # frozen_string_literal: true
 
 RSpec.describe AdminUserListSerializer do
-  fab!(:user) { Fabricate(:user) }
-  fab!(:admin) { Fabricate(:admin) }
+  fab!(:user)
+  fab!(:admin)
   let(:guardian) { Guardian.new(admin) }
 
-  let(:serializer) do
-    AdminUserListSerializer.new(user, scope: guardian, root: false)
-  end
+  let(:serializer) { AdminUserListSerializer.new(user, scope: guardian, root: false) }
 
   context "when totp enabled" do
-    before do
-      Fabricate(:user_second_factor_totp, user: user)
-    end
+    before { Fabricate(:user_second_factor_totp, user: user) }
     it "returns the right values" do
       json = serializer.as_json
 
@@ -21,9 +17,7 @@ RSpec.describe AdminUserListSerializer do
   end
 
   context "when security keys enabled" do
-    before do
-      Fabricate(:user_security_key, user: user)
-    end
+    before { Fabricate(:user_security_key, user: user) }
     it "returns the right values" do
       json = serializer.as_json
 
@@ -41,7 +35,7 @@ RSpec.describe AdminUserListSerializer do
         user,
         scope: Guardian.new(viewed_by),
         root: false,
-        emails_desired: opts && opts[:emails_desired]
+        emails_desired: opts && opts[:emails_desired],
       ).as_json
     end
 
@@ -93,6 +87,26 @@ RSpec.describe AdminUserListSerializer do
       json = serialize(user, admin)
       expect(json[:email]).to eq("user@email.com")
       expect(json[:secondary_emails]).to contain_exactly("first@email.com", "second@email.com")
+    end
+  end
+
+  describe "#can_be_deleted" do
+    it "is not included if the include_can_be_deleted option is not present" do
+      json = AdminUserListSerializer.new(user, scope: guardian, root: false).as_json
+
+      expect(json.key?(:can_be_deleted)).to eq(false)
+    end
+
+    it "is included if the include_can_be_deleted option is true" do
+      json =
+        AdminUserListSerializer.new(
+          user,
+          scope: guardian,
+          root: false,
+          include_can_be_deleted: true,
+        ).as_json
+
+      expect(json[:can_be_deleted]).to eq(true)
     end
   end
 end

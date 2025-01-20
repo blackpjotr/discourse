@@ -1,35 +1,38 @@
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
-import WizardField from "wizard/models/wizard-field";
+import { Field } from "discourse/static/wizard/models/wizard";
 
-module("Unit | Model | Wizard | wizard-field", function () {
+module("Unit | Model | Wizard | wizard-field", function (hooks) {
+  setupTest(hooks);
+
   test("basic state", function (assert) {
-    const w = WizardField.create({ type: "text" });
-    assert.ok(w.unchecked);
-    assert.ok(!w.valid);
-    assert.ok(!w.invalid);
+    const field = new Field({ type: "text" });
+    assert.true(field.unchecked);
+    assert.false(field.valid);
+    assert.false(field.invalid);
   });
 
   test("text - required - validation", function (assert) {
-    const w = WizardField.create({ type: "text", required: true });
-    assert.ok(w.unchecked);
+    const field = new Field({ type: "text", required: true });
+    assert.true(field.unchecked);
 
-    w.check();
-    assert.ok(!w.unchecked);
-    assert.ok(!w.valid);
-    assert.ok(w.invalid);
+    field.validate();
+    assert.false(field.unchecked);
+    assert.false(field.valid);
+    assert.true(field.invalid);
 
-    w.set("value", "a value");
-    w.check();
-    assert.ok(!w.unchecked);
-    assert.ok(w.valid);
-    assert.ok(!w.invalid);
+    field.value = "a value";
+    field.validate();
+    assert.false(field.unchecked);
+    assert.true(field.valid);
+    assert.false(field.invalid);
   });
 
   test("text - optional - validation", function (assert) {
-    const f = WizardField.create({ type: "text" });
-    assert.ok(f.unchecked);
+    const field = new Field({ type: "text" });
+    assert.true(field.unchecked);
 
-    f.check();
-    assert.ok(f.valid);
+    field.validate();
+    assert.true(field.valid);
   });
 });

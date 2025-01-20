@@ -1,10 +1,13 @@
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
 import toMarkdown, {
   addBlockDecorateCallback,
   addTagDecorateCallback,
 } from "discourse/lib/to-markdown";
 
-module("Unit | Utility | to-markdown", function () {
+module("Unit | Utility | to-markdown", function (hooks) {
+  setupTest(hooks);
+
   test("converts styles between normal words", function (assert) {
     const html = `Line with <s>styles</s> <b><i>between</i></b> words.`;
     const markdown = `Line with ~~styles~~ ***between*** words.`;
@@ -350,6 +353,42 @@ helloWorld();</code>consectetur.`;
 
     const markdown = `User mention: @discourse\n\nGroup mention: @discourse-group\n\nCategory link: #foo\n\nSub-category link: #foo:bar`;
 
+    assert.strictEqual(toMarkdown(html), markdown);
+  });
+
+  test("strips user status from mentions", function (assert) {
+    const statusHtml = `
+        <img class="emoji user-status"
+             src="/images/emoji/twitter/desert_island.png?v=12"
+             title="vacation">
+    `;
+    const html = `Mentioning <a class="mention" href="/u/andrei">@andrei${statusHtml}</a>`;
+    const expectedMarkdown = `Mentioning @andrei`;
+
+    assert.strictEqual(toMarkdown(html), expectedMarkdown);
+  });
+
+  test("keeps hashtag-cooked and converts to bare hashtag with type", function (assert) {
+    const html = `
+      <p dir="ltr">This is <a class="hashtag-cooked" href="/c/ux/14" data-type="category" data-slug="ux">
+      <svg class="fa d-icon d-icon-folder svg-icon svg-node">
+        <use href="#folder"></use>
+      </svg>
+      <span>ux</span>
+      </a> and <a class="hashtag-cooked" href="/tag/design" data-slug="design">
+      <svg class="fa d-icon d-icon-tag svg-icon svg-node">
+        <use href="#tag"></use>
+      </svg>
+      <span>design</span>
+      </a> and <a class="hashtag-cooked" href="/c/uncategorized/design/22" data-type="category" data-slug="design" data-ref="uncategorized:design">
+      <svg class="fa d-icon d-icon-folder svg-icon svg-node">
+        <use href="#folder"></use>
+      </svg>
+      <span>design</span>
+      </a></p>
+    `;
+
+    const markdown = `This is #ux::category and #design and #uncategorized:design`;
     assert.strictEqual(toMarkdown(html), markdown);
   });
 

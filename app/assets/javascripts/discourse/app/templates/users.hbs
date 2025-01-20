@@ -1,11 +1,29 @@
-<DSection @pageClass="users">
-  <LoadMore @selector=".directory tbody tr" @action={{action "loadMore"}}>
+{{#if this.model.canLoadMore}}
+  {{hide-application-footer}}
+{{/if}}
+
+{{body-class "users-page"}}
+<section>
+  <LoadMore
+    @selector=".directory-table .directory-table__cell"
+    @action={{action "loadMore"}}
+  >
     <div class="container">
       <div class="users-directory directory">
-        <PluginOutlet @name="users-top" @tagName="span" @connectorTagName="div" @args={{hash model=this.model}} />
+        <span>
+          <PluginOutlet
+            @name="users-top"
+            @connectorTagName="div"
+            @outletArgs={{hash model=this.model}}
+          />
+        </span>
         <div class="directory-controls">
           <div class="period-controls">
-            <PeriodChooser @period={{this.period}} @onChange={{action (mut this.period)}} @fullDay={{false}} />
+            <PeriodChooser
+              @period={{this.period}}
+              @onChange={{fn (mut this.period)}}
+              @fullDay={{false}}
+            />
             {{#if this.lastUpdatedAt}}
               <div class="directory-last-updated">
                 {{i18n "directory.last_updated"}}
@@ -19,30 +37,69 @@
                 {{i18n "directory.total_rows" count=this.model.totalRows}}
               {{/if}}
             </label>
-            <Input @value={{readonly this.nameInput}} placeholder={{i18n "directory.filter_name"}} class="filter-name no-blur" {{on "input" (action "onUsernameFilterChanged" value="target.value")}} />
+            <Input
+              @value={{readonly this.nameInput}}
+              placeholder={{i18n "directory.filter_name"}}
+              class="filter-name no-blur"
+              {{on "input" (with-event-value this.onUsernameFilterChanged)}}
+            />
             {{#if this.showGroupFilter}}
-              <ComboBox @class="directory-group-selector" @value={{this.group}} @content={{this.groupOptions}} @onChange={{action this.groupChanged}} @options={{hash
-                  none="directory.group.all"
-                }} />
+              <ComboBox
+                @value={{this.group}}
+                @content={{this.groupOptions}}
+                @onChange={{this.groupChanged}}
+                @options={{hash none="directory.group.all"}}
+                class="directory-group-selector"
+              />
             {{/if}}
             {{#if this.currentUser.staff}}
-              <DButton @icon="wrench" @action={{action "showEditColumnsModal"}} @class="btn-default open-edit-columns-btn" />
+              <DButton
+                @icon="wrench"
+                @action={{this.showEditColumnsModal}}
+                class="btn-default open-edit-columns-btn"
+              />
             {{/if}}
-            <PluginOutlet @name="users-directory-controls" @args={{hash model=this.model}} />
+            <PluginOutlet
+              @name="users-directory-controls"
+              @outletArgs={{hash model=this.model}}
+            />
           </div>
         </div>
 
         <ConditionalLoadingSpinner @condition={{this.isLoading}}>
           {{#if this.model.length}}
-            <DirectoryTable @items={{this.model}} @columns={{this.columns}} @showTimeRead={{this.showTimeRead}} @order={{this.order}} @asc={{this.asc}} />
+            <DirectoryTable
+              @items={{this.model}}
+              @columns={{this.columns}}
+              @showTimeRead={{this.showTimeRead}}
+              @order={{this.order}}
+              @updateOrder={{fn (mut this.order)}}
+              @asc={{this.asc}}
+              @updateAsc={{fn (mut this.asc)}}
+            />
             <ConditionalLoadingSpinner @condition={{this.model.loadingMore}} />
           {{else}}
-            <div class="clearfix"></div>
-            <p>{{i18n "directory.no_results"}}</p>
+            <div class="empty-state">
+              <div class="empty-state-body">
+                <p>
+                  {{#if this.name}}
+                    {{i18n "directory.no_results_with_search"}}
+                  {{else}}
+                    {{i18n "directory.no_results.body"}}
+                    {{#if this.currentUser.staff}}
+                      {{html-safe
+                        (i18n
+                          "directory.no_results.extra_body" basePath=(base-path)
+                        )
+                      }}
+                    {{/if}}
+                  {{/if}}
+                </p>
+              </div>
+            </div>
           {{/if}}
         </ConditionalLoadingSpinner>
-
       </div>
     </div>
   </LoadMore>
-</DSection>
+</section>

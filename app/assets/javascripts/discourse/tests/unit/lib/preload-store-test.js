@@ -1,8 +1,11 @@
+import { setupTest } from "ember-qunit";
 import { module, test } from "qunit";
-import PreloadStore from "discourse/lib/preload-store";
 import { Promise } from "rsvp";
+import PreloadStore from "discourse/lib/preload-store";
 
 module("Unit | Utility | preload-store", function (hooks) {
+  setupTest(hooks);
+
   hooks.beforeEach(function () {
     PreloadStore.store("bane", "evil");
   });
@@ -58,8 +61,8 @@ module("Unit | Utility | preload-store", function (hooks) {
   test("returns falsy values without calling finder", async function (assert) {
     PreloadStore.store("falsy", false);
     const result = await PreloadStore.getAndRemove("falsy", () =>
-      assert.ok(false)
+      assert.true(false)
     );
-    assert.strictEqual(result, false);
+    assert.false(result);
   });
 });

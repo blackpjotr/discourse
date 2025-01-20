@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class AdminDetailedUserSerializer < AdminUserSerializer
-
   attributes :moderator,
              :can_grant_admin,
              :can_revoke_admin,
@@ -36,7 +35,8 @@ class AdminDetailedUserSerializer < AdminUserSerializer
              :can_disable_second_factor,
              :can_delete_sso_record,
              :api_key_count,
-             :external_ids
+             :external_ids,
+             :similar_users_count
 
   has_one :approved_by, serializer: BasicUserSerializer, embed: :objects
   has_one :suspended_by, serializer: BasicUserSerializer, embed: :objects
@@ -106,11 +106,11 @@ class AdminDetailedUserSerializer < AdminUserSerializer
 
   def next_penalty
     step_number = penalty_counts.total
-    steps = SiteSetting.penalty_step_hours.split('|')
+    steps = SiteSetting.penalty_step_hours.split("|")
     step_number = [step_number, steps.length].min
     penalty_hours = steps[step_number]
     Integer(penalty_hours, 10).hours.from_now
-  rescue
+  rescue StandardError
     nil
   end
 
@@ -154,6 +154,14 @@ class AdminDetailedUserSerializer < AdminUserSerializer
     end
 
     external_ids
+  end
+
+  def similar_users_count
+    @options[:similar_users_count]
+  end
+
+  def include_similar_users_count?
+    @options[:similar_users_count].present?
   end
 
   def can_delete_sso_record

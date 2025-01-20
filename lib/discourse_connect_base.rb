@@ -1,12 +1,18 @@
 # frozen_string_literal: true
 
 class DiscourseConnectBase
+  class ParseError < RuntimeError
+  end
 
-  class ParseError < RuntimeError; end
+  class PayloadParseError < ParseError
+  end
 
-  ACCESSORS = %i{
+  class SignatureError < ParseError
+  end
+
+  ACCESSORS = %i[
     add_groups
-    admin moderator
+    admin
     avatar_force_update
     avatar_url
     bio
@@ -14,14 +20,17 @@ class DiscourseConnectBase
     confirmed_2fa
     email
     external_id
+    failed
     groups
     locale
     locale_force_update
     location
     logout
+    moderator
     name
     no_2fa_methods
     nonce
+    prompt
     profile_background_url
     remove_groups
     require_2fa
@@ -31,14 +40,15 @@ class DiscourseConnectBase
     title
     username
     website
-  }
+  ]
 
   FIXNUMS = []
 
-  BOOLS = %i{
+  BOOLS = %i[
     admin
     avatar_force_update
     confirmed_2fa
+    failed
     locale_force_update
     logout
     moderator
@@ -46,10 +56,10 @@ class DiscourseConnectBase
     require_2fa
     require_activation
     suppress_welcome_message
-  }
+  ]
 
   def self.nonce_expiry_time
-    @nonce_expiry_time ||= 10.minutes
+    @nonce_expiry_time ||= 30.minutes
   end
 
   def self.nonce_expiry_time=(v)
@@ -76,29 +86,37 @@ class DiscourseConnectBase
     sso.sso_secret = sso_secret if sso_secret
 
     parsed = Rack::Utils.parse_query(payload)
+
+    raise PayloadParseError.new(<<~MSG) if parsed["sso"] =~ %r{[^a-zA-Z0-9=\r\n/+]}m
+        The SSO field should be Base64 encoded, using only A-Z, a-z, 0-9, +, /, and = characters.
+        
+        Your input contains characters we don't understand as Base64, see http://en.wikipedia.org/wiki/Base64.
+        
+        sso: #{parsed["sso"]}
+      MSG
+
     decoded = Base64.decode64(parsed["sso"])
     decoded_hash = Rack::Utils.parse_query(decoded)
 
-    if sso.sign(parsed["sso"]) != parsed["sig"]
-      diags = "\n\nsso: #{parsed["sso"]}\n\nsig: #{parsed["sig"]}\n\nexpected sig: #{sso.sign(parsed["sso"])}"
-      if parsed["sso"] =~ /[^a-zA-Z0-9=\r\n\/+]/m
-        raise ParseError, "The SSO field should be Base64 encoded, using only A-Z, a-z, 0-9, +, /, and = characters. Your input contains characters we don't understand as Base64, see http://en.wikipedia.org/wiki/Base64 #{diags}"
-      else
-        raise ParseError, "Bad signature for payload #{diags}"
-      end
-    end
+    raise SignatureError, <<~MSG if sso.sign(parsed["sso"]) != parsed["sig"]
+        Bad signature for payload
+
+        sso: #{parsed["sso"]}
+        
+        sig: #{parsed["sig"]}
+        
+        expected sig: #{sso.sign(parsed["sso"])}
+        MSG
 
     ACCESSORS.each do |k|
       val = decoded_hash[k.to_s]
       val = val.to_i if FIXNUMS.include? k
-      if BOOLS.include? k
-        val = ["true", "false"].include?(val) ? val == "true" : nil
-      end
+      val = %w[true false].include?(val) ? val == "true" : nil if BOOLS.include? k
       sso.public_send("#{k}=", val)
     end
 
     decoded_hash.each do |k, v|
-      if field = k[/^custom\.(.+)$/, 1]
+      if field = k[/\Acustom\.(.+)\z/, 1]
         sso.custom_fields[field] = v
       end
     end
@@ -137,12 +155,12 @@ class DiscourseConnectBase
 
   def to_url(base_url = nil)
     base = "#{base_url || sso_url}"
-    "#{base}#{base.include?('?') ? '&' : '?'}#{payload}"
+    "#{base}#{base.include?("?") ? "&" : "?"}#{payload}"
   end
 
   def payload(secret = nil)
     payload = Base64.strict_encode64(unsigned_payload)
-    "sso=#{CGI::escape(payload)}&sig=#{sign(payload, secret)}"
+    "sso=#{CGI.escape(payload)}&sig=#{sign(payload, secret)}"
   end
 
   def unsigned_payload
@@ -157,9 +175,7 @@ class DiscourseConnectBase
       payload[k] = val
     end
 
-    @custom_fields&.each do |k, v|
-      payload["custom.#{k}"] = v.to_s
-    end
+    @custom_fields&.each { |k, v| payload["custom.#{k}"] = v.to_s }
 
     payload
   end

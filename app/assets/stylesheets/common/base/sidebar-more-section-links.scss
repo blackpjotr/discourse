@@ -1,45 +1,43 @@
-.sidebar-more-section-links-details {
-  &:focus-within,
-  &:hover {
-    background: var(--d-sidebar-highlight-color);
+.sidebar-more-section-links-details-content {
+  background-color: var(--d-sidebar-background);
+  transition: background-color 0.25s;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--d-sidebar-border-color);
+  margin: 0 calc(var(--d-sidebar-row-horizontal-padding) * 2 / 3);
+
+  .sidebar-row {
+    padding: 0.33rem calc(var(--d-sidebar-row-horizontal-padding) / 3);
   }
+}
 
-  .sidebar-more-section-links-details-summary {
-    color: var(--primary-high);
-    transition: background-color 0.25s;
-    display: flex;
-    align-items: center;
-    list-style: none;
-    box-sizing: border-box;
+.sidebar-more-section-links-details-content-main {
+  position: sticky;
+  margin: 0;
+}
 
-    .d-icon {
-      margin-left: auto;
-      color: var(--primary-medium);
-    }
+.sidebar-more-section-links-details-content-footer {
+  border-top: 2px solid var(--d-sidebar-border-color);
+  display: flex;
+  width: 100%;
 
-    &::before {
-      display: none;
-    }
-  }
-
-  .sidebar-more-section-links-details-content-wrapper {
-    position: absolute;
+  .sidebar-section-link-wrapper {
     width: 100%;
-    z-index: z("modal", "content") + 1;
-    background: transparent;
   }
+}
 
-  .sidebar-more-section-link-details-content {
-    background-color: var(--secondary);
-    box-shadow: shadow("dropdown");
-    margin: 0 calc(var(--d-sidebar-row-horizontal-padding) * 2 / 3);
+.sidebar-more-section-links-details-content-wrapper {
+  position: absolute;
+  width: 100%;
+  z-index: z("modal", "content") + 1;
+}
 
-    .sidebar-row {
-      padding: calc(var(--d-sidebar-row-horizontal-padding) / 3);
+.sidebar-more-section-links-details {
+  position: relative;
+  @include breakpoint(tablet) {
+    grid-column-start: 1;
+    grid-column-end: 3;
+    .sidebar-more-section-links-details-content-main {
+      gap: 0 1em;
     }
-  }
-
-  .sidebar-more-section-links-details-content-secondary {
-    border-top: 1.5px solid var(--primary-low);
   }
 }

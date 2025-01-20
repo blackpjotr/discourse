@@ -2,10 +2,13 @@
 
 module BackupRestore
   class S3BackupStore < BackupStore
-    UPLOAD_URL_EXPIRES_AFTER_SECONDS ||= 6.hours.to_i
+    UPLOAD_URL_EXPIRES_AFTER_SECONDS = 6.hours.to_i
 
-    delegate :abort_multipart, :presign_multipart_part, :list_multipart_parts,
-      :complete_multipart, to: :s3_helper
+    delegate :abort_multipart,
+             :presign_multipart_part,
+             :list_multipart_parts,
+             :complete_multipart,
+             to: :s3_helper
 
     def initialize(opts = {})
       @s3_options = S3Helper.s3_options(SiteSetting)
@@ -13,7 +16,7 @@ module BackupRestore
     end
 
     def s3_helper
-      @s3_helper ||= S3Helper.new(s3_bucket_name_with_prefix, '', @s3_options.clone)
+      @s3_helper ||= S3Helper.new(s3_bucket_name_with_prefix, "", @s3_options.clone)
     end
 
     def remote?
@@ -50,18 +53,21 @@ module BackupRestore
       obj = s3_helper.object(filename)
       raise BackupFileExists.new if obj.exists?
 
-      # TODO (martin) We can remove this at a later date when we move this
-      # ensure CORS for backups and direct uploads to a post-site-setting
-      # change event, so the rake task doesn't have to be run manually.
       @s3_helper.ensure_cors!([S3CorsRulesets::BACKUP_DIRECT_UPLOAD])
 
       presigned_url(obj, :put, UPLOAD_URL_EXPIRES_AFTER_SECONDS)
     rescue Aws::Errors::ServiceError => e
-      Rails.logger.warn("Failed to generate upload URL for S3: #{e.message.presence || e.class.name}")
+      Rails.logger.warn(
+        "Failed to generate upload URL for S3: #{e.message.presence || e.class.name}",
+      )
       raise StorageError.new(e.message.presence || e.class.name)
     end
 
-    def signed_url_for_temporary_upload(file_name, expires_in: S3Helper::UPLOAD_URL_EXPIRES_AFTER_SECONDS, metadata: {})
+    def signed_url_for_temporary_upload(
+      file_name,
+      expires_in: S3Helper::UPLOAD_URL_EXPIRES_AFTER_SECONDS,
+      metadata: {}
+    )
       obj = object_from_path(file_name)
       raise BackupFileExists.new if obj.exists?
       key = temporary_upload_path(file_name)
@@ -71,8 +77,8 @@ module BackupRestore
         expires_in: expires_in,
         opts: {
           metadata: metadata,
-          acl: "private"
-        }
+          acl: SiteSetting.s3_use_acls ? "private" : nil,
+        },
       )
     end
 
@@ -84,7 +90,7 @@ module BackupRestore
       folder_prefix = s3_helper.s3_bucket_folder_path.nil? ? "" : s3_helper.s3_bucket_folder_path
 
       if Rails.env.test?
-        folder_prefix = File.join(folder_prefix, "test_#{ENV['TEST_ENV_NUMBER'].presence || '0'}")
+        folder_prefix = File.join(folder_prefix, "test_#{ENV["TEST_ENV_NUMBER"].presence || "0"}")
       end
 
       folder_prefix
@@ -105,7 +111,10 @@ module BackupRestore
       s3_helper.copy(
         existing_external_upload_key,
         File.join(s3_helper.s3_bucket_folder_path, original_filename),
-        options: { acl: "private", apply_metadata_to_destination: true }
+        options: {
+          acl: SiteSetting.s3_use_acls ? "private" : nil,
+          apply_metadata_to_destination: true,
+        },
       )
       s3_helper.delete_object(existing_external_upload_key)
     end
@@ -119,11 +128,13 @@ module BackupRestore
     def unsorted_files
       objects = []
 
-      s3_helper.list.each do |obj|
-        if obj.key.match?(file_regex)
-          objects << create_file_from_object(obj)
+      begin
+        s3_helper.list.each do |obj|
+          objects << create_file_from_object(obj) if obj.key.match?(file_regex)
         end
-      end
+      rescue StandardError
+        NoMethodError
+      end #fired when s3_helper.list is nil - wont respond to .nil?
 
       objects
     rescue Aws::Errors::ServiceError => e
@@ -137,7 +148,7 @@ module BackupRestore
         filename: File.basename(obj.key),
         size: obj.size,
         last_modified: obj.last_modified,
-        source: include_download_source ? presigned_url(obj, :get, expires) : nil
+        source: include_download_source ? presigned_url(obj, :get, expires) : nil,
       )
     end
 
@@ -154,16 +165,17 @@ module BackupRestore
     end
 
     def file_regex
-      @file_regex ||= begin
-        path = s3_helper.s3_bucket_folder_path || ""
+      @file_regex ||=
+        begin
+          path = s3_helper.s3_bucket_folder_path || ""
 
-        if path.present?
-          path = "#{path}/" unless path.end_with?("/")
-          path = Regexp.quote(path)
+          if path.present?
+            path = "#{path}/" unless path.end_with?("/")
+            path = Regexp.quote(path)
+          end
+
+          %r{\A#{path}[^/]*\.t?gz\z}i
         end
-
-        /^#{path}[^\/]*\.t?gz$/i
-      end
     end
 
     def free_bytes

@@ -1,14 +1,14 @@
-import { module, test } from "qunit";
-import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { click, render } from "@ember/test-helpers";
-import { count, exists, query } from "discourse/tests/helpers/qunit-helpers";
-import { hbs } from "ember-cli-htmlbars";
-import widgetHbs from "discourse/widgets/hbs-compiler";
-import I18n from "I18n";
-import { Promise } from "rsvp";
-import { createWidget } from "discourse/widgets/widget";
 import { next } from "@ember/runloop";
+import { click, render, settled } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
+import { module, test } from "qunit";
+import { Promise } from "rsvp";
+import { h } from "virtual-dom";
 import { withPluginApi } from "discourse/lib/plugin-api";
+import { setupRenderingTest } from "discourse/tests/helpers/component-test";
+import widgetHbs from "discourse/widgets/hbs-compiler";
+import { createWidget } from "discourse/widgets/widget";
+import I18n from "discourse-i18n";
 
 module("Integration | Component | Widget | base", function (hooks) {
   setupRenderingTest(hooks);
@@ -29,7 +29,25 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="hello-test" @args={{this.args}} />`);
 
-    assert.strictEqual(query(".test").innerText, "Hello Robin");
+    assert.dom(".test").hasText("Hello Robin");
+  });
+
+  test("widget rerenders when args change", async function (assert) {
+    createWidget("hello-test", {
+      tagName: "div.test",
+      template: widgetHbs`Hello {{attrs.name}}`,
+    });
+
+    this.set("args", { name: "Robin" });
+
+    await render(hbs`<MountWidget @widget="hello-test" @args={{this.args}} />`);
+
+    assert.dom(".test").hasText("Hello Robin");
+
+    this.set("args", { name: "David" });
+    await settled();
+
+    assert.dom(".test").hasText("Hello David");
   });
 
   test("widget services", async function (assert) {
@@ -43,7 +61,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="service-test" />`);
 
-    assert.strictEqual(query(".base-url-test").innerText, "/");
+    assert.dom(".base-url-test").hasText("/");
   });
 
   test("hbs template - no tagName", async function (assert) {
@@ -55,7 +73,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="hbs-test" @args={{this.args}} />`);
 
-    assert.strictEqual(query("div.test").innerText, "Hello Robin");
+    assert.dom("div.test").hasText("Hello Robin");
   });
 
   test("hbs template - with tagName", async function (assert) {
@@ -68,7 +86,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="hbs-test" @args={{this.args}} />`);
 
-    assert.strictEqual(query("div.test").innerText, "Hello Robin");
+    assert.dom("div.test").hasText("Hello Robin");
   });
 
   test("hbs template - with data attributes", async function (assert) {
@@ -78,7 +96,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="hbs-test" @args={{this.args}} />`);
 
-    assert.strictEqual(query("div.my-div").dataset.myTest, "hello world");
+    assert.dom("div.my-div").hasAttribute("data-my-test", "hello world");
   });
 
   test("buildClasses", async function (assert) {
@@ -96,7 +114,7 @@ module("Integration | Component | Widget | base", function (hooks) {
       hbs`<MountWidget @widget="classname-test" @args={{this.args}} />`
     );
 
-    assert.ok(exists(".test.static.cool-class"), "it has all the classes");
+    assert.dom(".test.static.cool-class").exists("has all the classes");
   });
 
   test("buildAttributes", async function (assert) {
@@ -114,8 +132,8 @@ module("Integration | Component | Widget | base", function (hooks) {
       hbs`<MountWidget @widget="attributes-test" @args={{this.args}} />`
     );
 
-    assert.ok(exists('.test[data-evil="trout"]'));
-    assert.ok(exists('.test[aria-label="accessibility"]'));
+    assert.dom('.test[data-evil="trout"]').exists();
+    assert.dom('.test[aria-label="accessibility"]').exists();
   });
 
   test("buildId", async function (assert) {
@@ -129,7 +147,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="id-test" @args={{this.args}} />`);
 
-    assert.ok(exists("#test-1234"));
+    assert.dom("#test-1234").exists();
   });
 
   test("widget state", async function (assert) {
@@ -149,11 +167,11 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="state-test" />`);
 
-    assert.ok(exists("button.test"), "it renders the button");
-    assert.strictEqual(query("button.test").innerText, "0 clicks");
+    assert.dom("button.test").exists("renders the button");
+    assert.dom("button.test").hasText("0 clicks");
 
-    await click(query("button"));
-    assert.strictEqual(query("button.test").innerText, "1 clicks");
+    await click("button");
+    assert.dom("button.test").hasText("1 clicks");
   });
 
   test("widget update with promise", async function (assert) {
@@ -180,10 +198,10 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="promise-test" />`);
 
-    assert.strictEqual(query("button.test").innerText.trim(), "No name");
+    assert.dom("button.test").hasText("No name");
 
-    await click(query("button"));
-    assert.strictEqual(query("button.test").innerText.trim(), "Robin");
+    await click("button");
+    assert.dom("button.test").hasText("Robin");
   });
 
   test("widget attaching", async function (assert) {
@@ -196,8 +214,8 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="attach-test" />`);
 
-    assert.ok(exists(".container"), "renders container");
-    assert.ok(exists(".container .embedded"), "renders attached");
+    assert.dom(".container").exists("renders container");
+    assert.dom(".container .embedded").exists("renders attached");
   });
 
   test("magic attaching by name", async function (assert) {
@@ -210,8 +228,8 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="attach-test" />`);
 
-    assert.ok(exists(".container"), "renders container");
-    assert.ok(exists(".container .embedded"), "renders attached");
+    assert.dom(".container").exists("renders container");
+    assert.dom(".container .embedded").exists("renders attached");
   });
 
   test("custom attrs to a magic attached widget", async function (assert) {
@@ -227,8 +245,8 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="attach-test" />`);
 
-    assert.ok(exists(".container"), "renders container");
-    assert.strictEqual(query(".container .value").innerText, "hello world");
+    assert.dom(".container").exists("renders container");
+    assert.dom(".container .value").hasText("hello world");
   });
 
   test("using transformed values in a sub-expression", async function (assert) {
@@ -247,8 +265,8 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="attach-test" />`);
 
-    assert.ok(count(".container"), "renders container");
-    assert.strictEqual(query(".container .value").innerText, "hello world");
+    assert.dom(".container").exists("renders container");
+    assert.dom(".container .value").hasText("hello world");
   });
 
   test("handlebars d-icon", async function (assert) {
@@ -260,7 +278,7 @@ module("Integration | Component | Widget | base", function (hooks) {
       hbs`<MountWidget @widget="hbs-icon-test" @args={{this.args}} />`
     );
 
-    assert.strictEqual(count(".d-icon-arrow-down"), 1);
+    assert.dom(".d-icon-arrow-down").exists();
   });
 
   test("handlebars i18n", async function (assert) {
@@ -286,9 +304,9 @@ module("Integration | Component | Widget | base", function (hooks) {
     );
 
     // coming up
-    assert.strictEqual(query("span.string").innerText, "evil");
-    assert.strictEqual(query("span.var").innerText, "trout");
-    assert.strictEqual(query("a").title, "evil");
+    assert.dom("span.string").hasText("evil");
+    assert.dom("span.var").hasText("trout");
+    assert.dom("a").hasAttribute("title", "evil");
   });
 
   test("handlebars #each", async function (assert) {
@@ -309,8 +327,8 @@ module("Integration | Component | Widget | base", function (hooks) {
       hbs`<MountWidget @widget="hbs-each-test" @args={{this.args}} />`
     );
 
-    assert.strictEqual(count("ul li"), 3);
-    assert.strictEqual(query("ul li:nth-of-type(1)").innerText, "one");
+    assert.dom("ul li").exists({ count: 3 });
+    assert.dom("ul li:nth-of-type(1)").hasText("one");
   });
 
   test("widget decorating", async function (assert) {
@@ -331,9 +349,9 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="decorate-test" />`);
 
-    assert.ok(exists(".decorate"));
-    assert.strictEqual(query(".decorate b").innerText, "before");
-    assert.strictEqual(query(".decorate i").innerText, "after");
+    assert.dom(".decorate").exists();
+    assert.dom(".decorate b").hasText("before");
+    assert.dom(".decorate i").hasText("after");
   });
 
   test("widget settings", async function (assert) {
@@ -345,7 +363,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="settings-test" />`);
 
-    assert.strictEqual(query(".settings").innerText, "age is 36");
+    assert.dom(".settings").hasText("age is 36");
   });
 
   test("override settings", async function (assert) {
@@ -361,7 +379,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="ov-settings-test" />`);
 
-    assert.strictEqual(query(".settings").innerText, "age is 37");
+    assert.dom(".settings").hasText("age is 37");
   });
 
   test("get accessor", async function (assert) {
@@ -377,7 +395,7 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="get-accessor-test" />`);
 
-    assert.strictEqual(query("div.test").innerText, "Hello eviltrout");
+    assert.dom("div.test").hasText("Hello eviltrout");
   });
 
   test("tagName", async function (assert) {
@@ -389,9 +407,79 @@ module("Integration | Component | Widget | base", function (hooks) {
 
     await render(hbs`<MountWidget @widget="tag-name-override-test" />`);
 
-    assert.ok(
-      exists("section.override"),
-      "renders container with overridden tagName"
+    assert
+      .dom("section.override")
+      .exists("renders container with overridden tagName");
+  });
+
+  test("avoids rerendering on prepend", async function (assert) {
+    createWidget("prepend-test", {
+      tagName: "div.test",
+      html(attrs) {
+        const result = [];
+        result.push(
+          this.attach("button", {
+            label: "rerender",
+            className: "rerender",
+            action: "dummyAction",
+          })
+        );
+        result.push(
+          h(
+            "div",
+            attrs.array.map((val) => h(`span.val.${val}`, { key: val }, val))
+          )
+        );
+        return result;
+      },
+      dummyAction() {},
+    });
+
+    const array = ["ElementOne", "ElementTwo"];
+    this.set("args", { array });
+
+    await render(
+      hbs`<MountWidget @widget="prepend-test" @args={{this.args}} />`
     );
+
+    const startElements = Array.from(document.querySelectorAll("span.val"));
+    assert.deepEqual(
+      startElements.map((e) => e.innerText),
+      ["ElementOne", "ElementTwo"]
+    );
+    const elementOneBefore = startElements[0];
+
+    const parent = elementOneBefore.parentNode;
+    const observer = new MutationObserver(function (mutations) {
+      assert.false(
+        mutations.some((m) =>
+          Array.from(m.addedNodes).includes(elementOneBefore)
+        )
+      );
+    });
+    observer.observe(parent, { childList: true });
+
+    array.unshift(
+      "PrependedElementOne",
+      "PrependedElementTwo",
+      "PrependedElementThree"
+    );
+
+    await click(".rerender");
+
+    const endElements = Array.from(document.querySelectorAll("span.val"));
+    assert.deepEqual(
+      endElements.map((e) => e.innerText),
+      [
+        "PrependedElementOne",
+        "PrependedElementTwo",
+        "PrependedElementThree",
+        "ElementOne",
+        "ElementTwo",
+      ]
+    );
+    const elementOneAfter = endElements[3];
+
+    assert.strictEqual(elementOneBefore, elementOneAfter);
   });
 });

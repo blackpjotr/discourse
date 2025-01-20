@@ -15,13 +15,17 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'pull_request' || github.repository != 'discourse/discourse-private-mirror'
     name: run
-    runs-on: ubuntu-latest
-    container: discourse/discourse_test:slim
+    runs-on: ${{ (github.repository_owner == 'discourse' && 'debian-12') || 'ubuntu-latest' }}
+    container: discourse/discourse_test:release
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Set working directory owner
+        run: chown root:root .
+
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
@@ -30,13 +34,9 @@ jobs:
           git config --global user.email "ci@ci.invalid"
           git config --global user.name "Discourse CI"
 
-      - name: Bundler cache
-        uses: actions/cache@v3
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-gem-
+      - name: Symlink vendor/bundle from image
+        run: |
+          ln -s /var/www/discourse/vendor/bundle vendor/bundle
 
       - name: Setup gems
         run: |
@@ -47,56 +47,41 @@ jobs:
           bundle install --jobs 4
           bundle clean
 
-      - name: Get yarn cache directory
-        id: yarn-cache-dir
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - name: Yarn cache
-        uses: actions/cache@v3
-        id: yarn-cache
-        with:
-          path: ${{ steps.yarn-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      - name: Yarn install
-        run: yarn install
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Rubocop
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         run: bundle exec rubocop --parallel .
 
-      - name: ESLint (core)
-        if: ${{ always() }}
-        run: yarn eslint app/assets/javascripts
+      - name: syntax_tree
+        if: ${{ !cancelled() }}
+        run: |
+          set -E
+          bundle exec stree check Gemfile $(git ls-files '*.rb') $(git ls-files '*.rake') $(git ls-files '*.thor')
 
-      - name: ESLint (core plugins)
-        if: ${{ always() }}
-        run: yarn eslint plugins
+      - name: ESLint
+        if: ${{ !cancelled() }}
+        run: pnpm lint:js
 
       - name: Prettier
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         run: |
-          yarn prettier -v
-          yarn pprettier --list-different \
-            "app/assets/stylesheets/**/*.scss" \
-            "app/assets/javascripts/**/*.js" \
-            "plugins/**/assets/stylesheets/**/*.scss" \
-            "plugins/**/assets/javascripts/**/*.js"
+          pnpm prettier -v
+          pnpm lint:prettier
 
       - name: Ember template lint
-        if: ${{ always() }}
-        run: |
-          yarn ember-template-lint \
-            --no-error-on-unmatched-pattern \
-            "app/assets/javascripts/**/*.hbs" \
-            "plugins/**/assets/javascripts/**/*.hbs"
+        if: ${{ !cancelled() }}
+        run: pnpm lint:hbs
 
       - name: English locale lint (core)
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         run: bundle exec ruby script/i18n_lint.rb "config/**/locales/{client,server}.en.yml"
 
       - name: English locale lint (core plugins)
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         run: bundle exec ruby script/i18n_lint.rb "plugins/**/locales/{client,server}.en.yml"
+
+      - name: Glint
+        if: ${{ !cancelled() }}
+        run: pnpm glint -p jsconfig.json

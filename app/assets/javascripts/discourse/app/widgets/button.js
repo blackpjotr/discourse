@@ -1,8 +1,9 @@
-import DiscourseURL from "discourse/lib/url";
-import I18n from "I18n";
-import { createWidget } from "discourse/widgets/widget";
+import $ from "jquery";
 import { h } from "virtual-dom";
-import { iconNode } from "discourse-common/lib/icon-library";
+import { iconNode } from "discourse/lib/icon-library";
+import DiscourseURL from "discourse/lib/url";
+import { createWidget } from "discourse/widgets/widget";
+import { i18n } from "discourse-i18n";
 
 export const ButtonClass = {
   tagName: "button.widget-button.btn",
@@ -10,7 +11,7 @@ export const ButtonClass = {
   buildClasses(attrs) {
     let className = this.attrs.className || "";
 
-    let hasText = attrs.label || attrs.contents;
+    let hasText = attrs.translatedLabel || attrs.label || attrs.contents;
 
     if (!hasText) {
       className += " no-text";
@@ -34,7 +35,7 @@ export const ButtonClass = {
     let title = attrs.translatedTitle;
 
     if (!title && attrs.title) {
-      title = I18n.t(attrs.title, attrs.titleOptions);
+      title = i18n(attrs.title, attrs.titleOptions);
     }
 
     if (title) {
@@ -49,8 +50,20 @@ export const ButtonClass = {
       attributes["aria-label"] = attrs.translatedAriaLabel;
     }
 
+    if (attrs.ariaExpanded) {
+      attributes["aria-expanded"] = attrs.ariaExpanded;
+    }
+
+    if (attrs.ariaControls) {
+      attributes["aria-controls"] = attrs.ariaControls;
+    }
+
     if (attrs.ariaPressed) {
       attributes["aria-pressed"] = attrs.ariaPressed;
+    }
+
+    if (attrs.ariaLive) {
+      attributes["aria-live"] = attrs.ariaLive;
     }
 
     if (attrs.tabAttrs) {
@@ -95,7 +108,7 @@ export const ButtonClass = {
     }
     if (attrs.label) {
       contents.push(
-        h("span.d-button-label", I18n.t(attrs.label, attrs.labelOptions))
+        h("span.d-button-label", i18n(attrs.label, attrs.labelOptions))
       );
     }
     if (attrs.translatedLabel) {

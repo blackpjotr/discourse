@@ -1,10 +1,10 @@
-import { discourseModule } from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
-import { createRenderDirector } from "discourse/tests/helpers/reviewable-types-helper";
 import { htmlSafe } from "@ember/template";
+import { setupTest } from "ember-qunit";
+import { module, test } from "qunit";
 import { emojiUnescape } from "discourse/lib/text";
 import UserMenuReviewable from "discourse/models/user-menu-reviewable";
-import I18n from "I18n";
+import { createRenderDirector } from "discourse/tests/helpers/reviewable-types-helper";
+import { i18n } from "discourse-i18n";
 
 function getReviewable(overrides = {}) {
   return UserMenuReviewable.create(
@@ -21,7 +21,9 @@ function getReviewable(overrides = {}) {
   );
 }
 
-discourseModule("Unit | Reviewable Items | queued-post", function () {
+module("Unit | Reviewable Items | queued-post", function (hooks) {
+  setupTest(hooks);
+
   test("description", function (assert) {
     const reviewable = getReviewable({
       topic_fancy_title: "This is safe title &lt;a&gt; :heart:",
@@ -34,7 +36,7 @@ discourseModule("Unit | Reviewable Items | queued-post", function () {
     assert.deepEqual(
       director.description,
       htmlSafe(
-        I18n.t("user_menu.reviewable.new_post_in_topic", {
+        i18n("user_menu.reviewable.new_post_in_topic", {
           title: `This is safe title &lt;a&gt; ${emojiUnescape(":heart:")}`,
         })
       ),
@@ -46,7 +48,7 @@ discourseModule("Unit | Reviewable Items | queued-post", function () {
     assert.deepEqual(
       director.description,
       htmlSafe(
-        I18n.t("user_menu.reviewable.new_post_in_topic", {
+        i18n("user_menu.reviewable.new_post_in_topic", {
           title: `This is unsafe title &lt;a&gt; ${emojiUnescape(":heart:")}`,
         })
       ),

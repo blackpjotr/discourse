@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 class Jobs::NotifyReviewable < ::Jobs::Base
-  # remove all the legacy stuff here when redesigned_user_menu_enabled is
-  # removed
+  # this job can take a very long time if there are many mods
+  # do not swamp the queue with it
+  cluster_concurrency 1
+
   def execute(args)
     return unless reviewable = Reviewable.find_by(id: args[:reviewable_id])
 
@@ -11,87 +13,59 @@ class Jobs::NotifyReviewable < ::Jobs::Base
     all_updates = Hash.new { |h, k| h[k] = {} }
 
     if args[:updated_reviewable_ids].present?
-      Reviewable.where(id: args[:updated_reviewable_ids]).each do |r|
-        payload = {
-          last_performing_username: args[:performing_username],
-          status: r.status
-        }
+      Reviewable
+        .where(id: args[:updated_reviewable_ids])
+        .each do |r|
+          payload = { last_performing_username: args[:performing_username], status: r.status }
 
-        all_updates[:admins][r.id] = payload
-        all_updates[:moderators][r.id] = payload if r.reviewable_by_moderator?
-        all_updates[r.reviewable_by_group_id][r.id] = payload if r.reviewable_by_group_id
-      end
+          all_updates[:admins][r.id] = payload
+          all_updates[:moderators][r.id] = payload if r.reviewable_by_moderator?
+
+          if SiteSetting.enable_category_group_moderation? && r.category.present?
+            r
+              .category
+              .moderating_groups
+              .pluck(:id)
+              .each { |group_id| all_updates[group_id][r.id] = payload }
+          end
+        end
     end
 
-    counts = Hash.new(0)
+    DistributedMutex.synchronize("notify_reviewable_job", validity: 120) do
+      notify_users(User.real.admins, all_updates[:admins])
 
-    Reviewable.default_visible.pending.each do |r|
-      counts[:admins] += 1
-      counts[:moderators] += 1 if r.reviewable_by_moderator?
-      counts[r.reviewable_by_group_id] += 1 if r.reviewable_by_group_id
-    end
-
-    if SiteSetting.enable_experimental_sidebar_hamburger
-      notify_users(
-        User.real.admins,
-        all_updates[:admins]
-      )
-    else
-      notify_legacy(
-        User.real.admins.pluck(:id),
-        count: counts[:admins],
-        updates: all_updates[:admins],
-      )
-    end
-
-    if reviewable.reviewable_by_moderator?
-      if SiteSetting.enable_experimental_sidebar_hamburger
+      if reviewable.reviewable_by_moderator?
         notify_users(
           User.real.moderators.where("id NOT IN (?)", @contacted),
-          all_updates[:moderators]
-        )
-      else
-        notify_legacy(
-          User.real.moderators.where("id NOT IN (?)", @contacted).pluck(:id),
-          count: counts[:moderators],
-          updates: all_updates[:moderators],
+          all_updates[:moderators],
         )
       end
-    end
 
-    if SiteSetting.enable_category_group_moderation? && (group = reviewable.reviewable_by_group)
-      users = group.users.includes(:group_users).where("users.id NOT IN (?)", @contacted)
+      if SiteSetting.enable_category_group_moderation? && reviewable.category.present?
+        users =
+          User
+            .includes(:group_users)
+            .joins(:group_users)
+            .joins(
+              "INNER JOIN category_moderation_groups ON category_moderation_groups.group_id = group_users.group_id",
+            )
+            .where("category_moderation_groups.category_id": reviewable.category.id)
+            .where("users.id NOT IN (?)", @contacted)
+            .distinct
 
-      users.find_each do |user|
-        count = 0
-        updates = {}
-        user.group_users.each do |gu|
-          updates.merge!(all_updates[gu.group_id])
-          count += counts[gu.group_id]
-        end
+        users.find_each do |user|
+          updates = {}
+          user.group_users.each { |gu| updates.merge!(all_updates[gu.group_id]) }
 
-        if SiteSetting.enable_experimental_sidebar_hamburger
           notify_user(user, updates)
-        else
-          notify_legacy([user.id], count: count, updates: updates)
         end
-      end
 
-      @contacted += users.pluck(:id)
+        @contacted += users.pluck(:id)
+      end
     end
   end
 
   protected
-
-  def notify_legacy(user_ids, count:, updates:)
-    return if user_ids.blank?
-
-    data = { reviewable_count: count }
-    data[:updates] = updates if updates.present?
-
-    MessageBus.publish("/reviewable_counts", data, user_ids: user_ids)
-    @contacted += user_ids
-  end
 
   def notify_users(users, updates)
     users.find_each { |user| notify_user(user, updates) }
@@ -99,12 +73,6 @@ class Jobs::NotifyReviewable < ::Jobs::Base
   end
 
   def notify_user(user, updates)
-    data = {
-      reviewable_count: user.reviewable_count,
-      unseen_reviewable_count: user.unseen_reviewable_count
-    }
-    data[:updates] = updates if updates.present?
-
-    user.publish_reviewable_counts(data)
+    user.publish_reviewable_counts(updates.present? ? { updates: updates } : nil)
   end
 end

@@ -1,21 +1,36 @@
-import I18n from "I18n";
 import EmberObject from "@ember/object";
-import User from "discourse/models/user";
-import selectKit from "discourse/tests/helpers/select-kit-helper";
-import sinon from "sinon";
+import {
+  click,
+  currentRouteName,
+  currentURL,
+  settled,
+  visit,
+} from "@ember/test-helpers";
+import { test } from "qunit";
+import { cloneJSON } from "discourse/lib/object";
 import userFixtures from "discourse/tests/fixtures/user-fixtures";
 import {
   acceptance,
-  exists,
   publishToMessageBus,
-  query,
-  queryAll,
   updateCurrentUser,
 } from "discourse/tests/helpers/qunit-helpers";
-import * as logout from "discourse/lib/logout";
-import { click, currentRouteName, visit } from "@ember/test-helpers";
-import { cloneJSON } from "discourse-common/lib/object";
-import { test } from "qunit";
+import selectKit from "discourse/tests/helpers/select-kit-helper";
+import { i18n } from "discourse-i18n";
+
+/**
+ * Workaround for https://github.com/tildeio/router.js/pull/335
+ */
+async function visitWithRedirects(url) {
+  try {
+    await visit(url);
+  } catch (error) {
+    const { message } = error;
+    if (message !== "TransitionAborted") {
+      throw error;
+    }
+    await settled();
+  }
+}
 
 acceptance("User Routes", function (needs) {
   needs.user();
@@ -25,6 +40,7 @@ acceptance("User Routes", function (needs) {
       helper.response(400, {})
     );
   });
+
   test("Invalid usernames", async function (assert) {
     try {
       await visit("/u/eviltrout%2F..%2F..%2F/summary");
@@ -45,69 +61,65 @@ acceptance("User Routes", function (needs) {
 
   test("Invites", async function (assert) {
     await visit("/u/eviltrout/invited/pending");
-    assert.ok(
-      document.body.classList.contains("user-invites-page"),
-      "has the body class"
-    );
+    assert
+      .dom(document.body)
+      .hasClass("user-invites-page", "has the body class");
   });
 
   test("Notifications", async function (assert) {
     await visit("/u/eviltrout/notifications");
-    assert.ok(
-      document.body.classList.contains("user-notifications-page"),
-      "has the body class"
-    );
 
-    const $links = queryAll(".item.notification a");
+    assert
+      .dom(document.body)
+      .hasClass("user-notifications-page", "has the body class");
 
-    assert.ok(
-      $links[2].href.includes(
-        "/u/eviltrout/notifications/likes-received?acting_username=aquaman"
-      )
-    );
+    const links = [...document.querySelectorAll(".notification a")];
+
+    assert
+      .dom(links[2])
+      .hasAttribute("href", /^\/u\/eviltrout\/notifications\/likes-received/);
 
     updateCurrentUser({ moderator: true, admin: false });
+
     await visit("/u/charlie/summary");
-    assert.notOk(
-      exists(".user-nav > .user-notifications"),
-      "does not have the notifications tab"
-    );
+
+    assert
+      .dom(".user-nav > .user-nav__notifications")
+      .doesNotExist("does not have the notifications tab");
 
     updateCurrentUser({ moderator: false, admin: true });
+
     await visit("/u/charlie/summary");
-    assert.ok(
-      exists(".user-nav > .user-notifications"),
-      "has the notifications tab"
-    );
+
+    assert
+      .dom(".user-nav > .user-nav__notifications")
+      .exists("has the notifications tab");
   });
 
   test("Root URL - Viewing Self", async function (assert) {
     await visit("/u/eviltrout");
-    assert.ok(
-      document.body.classList.contains("user-activity-page"),
-      "has the body class"
-    );
+    assert
+      .dom(document.body)
+      .hasClass("user-activity-page", "has the body class");
     assert.strictEqual(
       currentRouteName(),
       "userActivity.index",
       "it defaults to activity"
     );
-    assert.ok(exists(".container.viewing-self"), "has the viewing-self class");
+    assert.dom(".container.viewing-self").exists("has the viewing-self class");
   });
 
   test("Viewing Drafts", async function (assert) {
     await visit("/u/eviltrout/activity/drafts");
-    assert.ok(exists(".user-stream"), "has drafts stream");
-    assert.ok(
-      exists(".user-stream .user-stream-item-draft-actions"),
-      "has draft action buttons"
-    );
+    assert.dom(".user-stream").exists("has drafts stream");
+    assert
+      .dom(".user-stream .user-stream-item-draft-actions")
+      .exists("has draft action buttons");
 
     await click(".user-stream button.resume-draft:nth-of-type(1)");
-    assert.ok(
-      exists(".d-editor-input"),
-      "composer is visible after resuming a draft"
-    );
+    assert
+      .dom(".d-editor-input")
+      .exists("composer is visible after resuming a draft");
   });
 });
 
@@ -118,16 +130,16 @@ acceptance(
 
     test("Periods in current user's username don't act like wildcards", async function (assert) {
       await visit("/u/eviltrout");
-      assert.strictEqual(
-        query(".user-profile-names .username").textContent.trim(),
-        "eviltrout",
+      assert.dom(".user-profile-names .username").hasText(
+        `eviltrout
+                Robin Ward is an admin`,
         "eviltrout profile is shown"
       );
 
       await visit("/u/e.il.rout");
-      assert.strictEqual(
-        query(".user-profile-names .username").textContent.trim(),
-        "e.il.rout",
+      assert.dom(".user-profile-names .username").hasText(
+        `e.il.rout
+                Robin Ward is an admin`,
         "e.il.rout profile is shown"
       );
     });
@@ -144,11 +156,10 @@ acceptance("User Routes - Moderator viewing warnings", function (needs) {
 
   test("Messages - Warnings", async function (assert) {
     await visit("/u/eviltrout/messages/warnings");
-    assert.ok(
-      document.body.classList.contains("user-messages-page"),
-      "has the body class"
-    );
-    assert.ok(exists("div.alert-info"), "has the permissions alert");
+    assert
+      .dom(document.body)
+      .hasClass("user-messages-page", "has the body class");
+    assert.dom("div.alert-info").exists("has the permissions alert");
   });
 });
 
@@ -165,21 +176,33 @@ acceptance("User - Saving user options", function (needs) {
     disable_mailing_list_mode: false,
   });
 
+  let putRequestData;
+
   needs.pretender((server, helper) => {
-    server.put("/u/eviltrout.json", () => {
-      return helper.response(200, { user: {} });
+    server.put("/u/eviltrout.json", (request) => {
+      putRequestData = helper.parsePostData(request.requestBody);
+      return helper.response({ user: {} });
     });
   });
 
-  test("saving user options", async function (assert) {
-    const spy = sinon.spy(User.current(), "_saveUserData");
+  needs.hooks.afterEach(() => {
+    putRequestData = null;
+  });
 
+  test("saving user options", async function (assert) {
     await visit("/u/eviltrout/preferences/emails");
     await click(".pref-mailing-list-mode input[type='checkbox']");
     await click(".save-changes");
 
-    assert.ok(
-      spy.calledWithMatch({ mailing_list_mode: true }),
+    assert.deepEqual(
+      putRequestData,
+      {
+        digest_after_minutes: "10080",
+        email_digests: "true",
+        email_level: "1",
+        email_messages_level: "0",
+        mailing_list_mode: "true",
+      },
       "sends a PUT request to update the specified user option"
     );
 
@@ -187,8 +210,15 @@ acceptance("User - Saving user options", function (needs) {
     await selectKit("#user-email-messages-level").selectRowByValue(2); // never option
     await click(".save-changes");
 
-    assert.ok(
-      spy.calledWithMatch({ email_messages_level: 2 }),
+    assert.deepEqual(
+      putRequestData,
+      {
+        digest_after_minutes: "10080",
+        email_digests: "true",
+        email_level: "1",
+        email_messages_level: "2",
+        mailing_list_mode: "true",
+      },
       "is able to save a different user_option on a subsequent request"
     );
   });
@@ -208,7 +238,7 @@ acceptance("User - Notification level dropdown visibility", function (needs) {
 
   test("Notification level button is not rendered for user who cannot mute or ignore another user", async function (assert) {
     await visit("/u/charlie");
-    assert.notOk(exists(".user-notifications-dropdown"));
+    assert.dom(".user-notifications-dropdown").doesNotExist();
   });
 });
 
@@ -237,10 +267,9 @@ acceptance(
 
     test("Notification level is set to normal and can be changed to muted", async function (assert) {
       await visit("/u/charlie");
-      assert.ok(
-        exists(".user-notifications-dropdown"),
-        "Notification level dropdown is present"
-      );
+      assert
+        .dom(".user-notifications-dropdown")
+        .exists("notification level dropdown is present");
 
       const dropdown = selectKit(".user-notifications-dropdown");
       await dropdown.expand();
@@ -277,10 +306,9 @@ acceptance(
     });
     test("Notification level can be changed to ignored", async function (assert) {
       await visit("/u/charlie");
-      assert.ok(
-        exists(".user-notifications-dropdown"),
-        "Notification level dropdown is present"
-      );
+      assert
+        .dom(".user-notifications-dropdown")
+        .exists("notification level dropdown is present");
 
       const notificationLevelDropdown = selectKit(
         ".user-notifications-dropdown"
@@ -292,14 +320,14 @@ acceptance(
       );
 
       await notificationLevelDropdown.selectRowByValue("changeToIgnored");
-      assert.ok(exists(".ignore-duration-modal"));
+      assert.dom(".ignore-duration-with-username-modal").exists();
 
       const durationDropdown = selectKit(
-        ".ignore-duration-modal .future-date-input-selector"
+        ".ignore-duration-with-username-modal .future-date-input-selector"
       );
       await durationDropdown.expand();
       await durationDropdown.selectRowByIndex(0);
-      await click(".modal-footer .ignore-duration-save");
+      await click(".d-modal__footer .btn-primary");
       await notificationLevelDropdown.expand();
       assert.strictEqual(
         notificationLevelDropdown.selectedRow().value(),
@@ -309,26 +337,75 @@ acceptance(
   }
 );
 
+acceptance("User - Invalid view_user_route setting", function (needs) {
+  needs.settings({
+    view_user_route: "X",
+  });
+
+  test("It defaults to summary", async function (assert) {
+    await visit("/u/eviltrout");
+
+    assert.strictEqual(currentRouteName(), "user.summary");
+  });
+});
+
+acceptance("User - view_user_route setting set to activity", function (needs) {
+  needs.settings({
+    view_user_route: "activity",
+  });
+
+  test("It defaults to summary", async function (assert) {
+    await visit("/u/eviltrout");
+
+    assert.strictEqual(currentRouteName(), "userActivity.index");
+  });
+});
+
+acceptance("User - Valid view_user_route setting default", function () {
+  test("It defaults to summary", async function (assert) {
+    await visit("/u/eviltrout");
+
+    assert.strictEqual(currentRouteName(), "user.summary");
+  });
+});
+
 acceptance("User - Logout", function (needs) {
   needs.user({ username: "eviltrout" });
 
   test("Dialog works", async function (assert) {
-    sinon.stub(logout, "default");
     await visit("/u/eviltrout");
-    await publishToMessageBus("/logout");
+    await publishToMessageBus("/logout/19");
 
-    assert.ok(exists(".dialog-body"));
-    assert.ok(
-      !exists(".dialog-footer .btn-default"),
-      "no cancel button present"
-    );
-    assert.strictEqual(
-      query(".dialog-footer .btn-primary").innerText,
-      I18n.t("home"),
-      "primary dialog button is present"
-    );
+    assert.dom(".dialog-body").exists();
+    assert
+      .dom(".dialog-footer .btn-default")
+      .doesNotExist("no cancel button present");
+    assert
+      .dom(".dialog-footer .btn-primary")
+      .hasText(i18n("home"), "primary dialog button is present");
 
     await click(".dialog-overlay");
-    assert.ok(logout.default.called, "logout helper was called");
+  });
+});
+
+acceptance("User - /my/ shortcuts for logged-in users", function (needs) {
+  needs.user({ username: "eviltrout" });
+
+  test("Redirects correctly", async function (assert) {
+    await visitWithRedirects("/my/activity");
+    assert.strictEqual(currentURL(), "/u/eviltrout/activity");
+
+    await visitWithRedirects("/my/preferences/account");
+    assert.strictEqual(currentURL(), "/u/eviltrout/preferences/account");
+  });
+});
+
+acceptance("User - /my/ shortcuts for anon users", function () {
+  test("Redirects correctly", async function (assert) {
+    await visitWithRedirects("/my/activity");
+    assert.strictEqual(currentURL(), "/login-preferences");
+
+    await visitWithRedirects("/my/preferences/account");
+    assert.strictEqual(currentURL(), "/login-preferences");
   });
 });

@@ -1,6 +1,7 @@
-import ReviewableTypeBase from "discourse/lib/reviewable-types/base";
 import { htmlSafe } from "@ember/template";
-import I18n from "I18n";
+import ReviewableTypeBase from "discourse/lib/reviewable-types/base";
+import { emojiUnescape } from "discourse/lib/text";
+import { i18n } from "discourse-i18n";
 
 export default class extends ReviewableTypeBase {
   get description() {
@@ -8,13 +9,13 @@ export default class extends ReviewableTypeBase {
     const postNumber = this.reviewable.post_number;
     if (title && postNumber) {
       return htmlSafe(
-        I18n.t("user_menu.reviewable.post_number_with_topic_title", {
+        i18n("user_menu.reviewable.post_number_with_topic_title", {
           post_number: postNumber,
-          title,
+          title: emojiUnescape(title),
         })
       );
     } else {
-      return I18n.t("user_menu.reviewable.delete_post");
+      return i18n("user_menu.reviewable.deleted_post");
     }
   }
 }

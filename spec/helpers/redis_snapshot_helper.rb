@@ -2,12 +2,6 @@
 
 module RedisSnapshotHelper
   def use_redis_snapshotting
-    before(:each) do
-      RedisSnapshot.begin_faux_transaction
-    end
-
-    after(:each) do
-      RedisSnapshot.end_faux_transaction
-    end
+    puts "DEPRECATION NOTICE: `use_redis_snapshotting` has been deprecated without replacement as we now flush the Redis database after each test."
   end
 end

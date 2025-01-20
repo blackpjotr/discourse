@@ -1,7 +1,10 @@
+import { service } from "@ember/service";
 import DiscourseRoute from "discourse/routes/discourse";
 
-export default DiscourseRoute.extend({
+export default class AdminUsersIndexRoute extends DiscourseRoute {
+  @service router;
+
   redirect() {
-    this.transitionTo("adminUsersList");
-  },
-});
+    this.router.transitionTo("adminUsersList");
+  }
+}

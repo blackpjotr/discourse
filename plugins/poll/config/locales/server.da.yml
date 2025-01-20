@@ -11,11 +11,9 @@ da:
     poll_edit_window_mins: "Antal af minutter efter oprettelse af et indlæg hvor en afstemning kan redigeres."
     poll_minimum_trust_level_to_create: "Definer det minimale tillidsniveau, der er nødvendigt for at oprette afstemninger."
     poll_groupable_user_fields: "Et sæt brugerfeltnavne, der kan bruges til at gruppere og filtrere afstemningsresultater."
-    poll_export_data_explorer_query_id: "ID for Data Explorer-forespørgsel, der skal bruges til at eksportere afstemningsresultater (0 for at deaktivere)."
   poll:
     poll: "afstemning"
     invalid_argument: "Ugyldig værdi '%{value}' for argument '%{argument}'."
-    multiple_polls_without_name: "Der er flere afstemninger uden navn. Brug attributten '<code>name</code>' for at identificere dine afstemninger."
     multiple_polls_with_same_name: "Der er flere afstemninger med samme navn <strong>%{name}</strong>. Brug attributten '<code>name</code>' for at identificere dine afstemninger."
     default_poll_must_have_at_least_1_option: "Afstemningen skal have mindst 1 mulighed."
     named_poll_must_have_at_least_1_option: "Afstemningen navngivet <strong>%{name}</strong> skal have mindst 1 valgmulighed."

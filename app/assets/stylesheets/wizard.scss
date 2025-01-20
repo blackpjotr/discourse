@@ -1,24 +1,5 @@
-$wizard-bg: svg-uri(
-  '<?xml version="1.0" encoding="UTF-8"?>
-  <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="1906.75" height="980" viewBox="0 0 1906.75 980">
-    <path d="M488.66,863.09c-.95,0-1.9,.08-2.87,.23-10.9,1.74-20.73,12.53-18.33,27.56,2.4,15.03,16.43,23.52,27.44,21.76,5.23-.84,9.15-3.57,11.65-8.12,2.72-4.93,3.55-11.8,2.36-19.32-1.19-7.39-4.29-13.63-8.75-17.6-3.35-2.98-7.28-4.52-11.49-4.52Zm3.05,65.4c-18.96,0-36.43-14.97-39.65-35.14-3.53-22.1,10.2-42.06,31.26-45.43,9.94-1.58,19.59,1.27,27.2,8.04,7.14,6.35,12.04,15.87,13.78,26.78,1.78,11.1,.36,21.23-4.08,29.3-4.8,8.74-12.92,14.41-22.86,16-1.89,.3-3.77,.45-5.65,.45Z"/>
-    <path d="M252.13,687.19c0,42.64-27.43,60.69-72.35,60.69s-101.49-63.7-101.49-106.34,70.65-54.87,115.57-54.87,58.27,57.88,58.27,100.52Z" style="fill: #0ca64e; fill-rule: evenodd;"/>
-    <path d="M1849.08,829.55c-90.96,16.64-161.99-38.28-219.31-142.86-47.68-87.02,25.41-193.64,97.18-244.1,80.59-56.65,193.7,26.32,248.35,183.9,32.51,93.76-28.61,185.21-126.22,203.06Z" style="fill: #e84a51; fill-rule: evenodd;"/>
-    <path d="M1749.82,834.36c-17.29,16.8-36.86,24.94-53.76,12.76-16.9-12.18-19.47-31.75-3.5-49.8,15.58-17.6,37.62-33.19,54.52-21.02,16.9,12.18,20.84,40.46,2.74,58.05Z" style="fill: #fbf5af; fill-rule: evenodd;"/>
-    <path d="M269.84,223.52c0,19.4-22.98,39.33-40.94,39.33s-38.06-16.61-38.06-36.01,25.03-43.21,42.99-43.21,36.01,20.49,36.01,39.89Z" style="fill: #f0794a; fill-rule: evenodd;"/>
-  </svg>'
-);
-
-$wizard-mobile-bg: svg-uri(
-  '<?xml version="1.0" encoding="UTF-8"?>
-  <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
-    <path d="M65.11,755.03c-.95,0-1.9,.08-2.87,.23-10.9,1.74-20.73,12.53-18.33,27.56,2.4,15.03,16.43,23.52,27.44,21.76,5.23-.84,9.15-3.57,11.65-8.12,2.72-4.93,3.55-11.8,2.36-19.32-1.19-7.39-4.29-13.63-8.75-17.6-3.35-2.98-7.28-4.52-11.49-4.52h-.01Zm3.05,65.41c-18.96,0-36.43-14.97-39.65-35.14-3.53-22.1,10.2-42.06,31.26-45.43,9.94-1.58,19.59,1.27,27.2,8.04,7.14,6.35,12.04,15.87,13.78,26.78,1.78,11.1,.36,21.23-4.08,29.3-4.8,8.74-12.92,14.41-22.86,16-1.89,.3-3.77,.45-5.65,.45h0Z"/>
-    <path d="M118.58,461.13c0,42.64-27.43,60.69-72.35,60.69s-101.49-63.7-101.49-106.34,70.65-54.87,115.57-54.87,58.27,57.88,58.27,100.52h0Z" style="fill: #0ca64e; fill-rule: evenodd;"/>
-    <path d="M492.26,712.49c-90.96,16.64-161.99-38.28-219.31-142.86-47.68-87.02,25.41-193.64,97.18-244.1,80.59-56.65,193.7,26.32,248.35,183.9,32.51,93.76-28.61,185.21-126.22,203.06h0Z" style="fill: #e84a51; fill-rule: evenodd;"/>
-    <path d="M393,717.3c-17.29,16.8-36.86,24.94-53.76,12.76s-19.47-31.75-3.5-49.8c15.58-17.6,37.62-33.19,54.52-21.02,16.9,12.18,20.84,40.46,2.74,58.05h0Z" style="fill: #fbf5af; fill-rule: evenodd;"/>
-    <path d="M69.29,124.46c0,19.4-22.98,39.33-40.94,39.33S-9.71,147.18-9.71,127.78s25.03-43.21,42.99-43.21,36.01,20.49,36.01,39.89Z" style="fill: #f0794a; fill-rule: evenodd;"/>
-  </svg>'
-);
+$blob-bg: absolute-image-url("/branded-background.svg");
+$blob-mobile-bg: absolute-image-url("/branded-background-mobile.svg");
 
 @keyframes bump {
   0% {
@@ -35,30 +16,43 @@ $wizard-mobile-bg: svg-uri(
 }
 
 body.wizard {
-  background: $wizard-bg;
+  background-color: var(--secondary);
+  background-image: $blob-bg;
   background-size: 110vw 110vh; // crops better than cover at various viewport sizes
   background-repeat: no-repeat;
   background-position: bottom;
-  background-color: var(--secondary);
+
   color: var(--primary-very-high);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Oxygen-Sans, Ubuntu, Cantarell, Arial, sans-serif;
+
+  .wrap {
+    max-width: 100%;
+  }
+
+  @include breakpoint("mobile-extra-large") {
+    background: $blob-mobile-bg;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: bottom;
+  }
 
   #wizard-main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding-top: 1.5em;
+    height: 100%;
   }
 
-  @media screen and (max-height: 900px) {
-    .desktop-view & {
-      #main-outlet {
-        padding-top: 0;
-      }
+  .desktop-view & {
+    #main-outlet {
+      padding-top: 0;
     }
   }
 
   .discourse-logo svg {
+    position: relative;
     height: 70px;
     width: auto;
     @include breakpoint("mobile-extra-large") {
@@ -71,11 +65,10 @@ body.wizard {
     }
   }
 
-  @include breakpoint("mobile-extra-large") {
-    background: $wizard-mobile-bg;
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: bottom;
+  .wizard-canvas {
+    position: fixed;
+    top: 0;
+    pointer-events: none;
   }
 }
 
@@ -86,52 +79,59 @@ body.wizard {
   background-color: var(--secondary);
   box-shadow: 0 4px 19px 6px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
-  margin: 3em auto 1.5em auto;
+  margin: 1em auto;
   padding: 0;
-  max-width: 85%;
-  min-width: 35%;
-  width: 100%;
   border: 1px solid var(--primary-low);
   border-radius: 8px;
-  padding: 2em 3em;
+  padding: 2em;
 
-  @media screen and (max-height: 800px) {
-    .desktop-view & {
-      margin: 1em auto;
-    }
+  @include breakpoint("large") {
+    padding: 2em 1.5em;
   }
 
-  @include breakpoint("mobile-extra-large") {
-    padding: 2em 1.5em;
-    max-width: 99%;
-    margin: 1.5em auto;
+  &__step {
+    margin-top: 1em;
+    max-width: 50%;
+    min-width: 35%;
+    width: 100%;
+
+    @include breakpoint("large") {
+      max-width: 95%;
+    }
+
+    .wizard-container__button:not(.wizard-container__button-upload) {
+      @include breakpoint("mobile-extra-large") {
+        width: 100%;
+        margin: 0 0 0.5em;
+      }
+    }
+
+    &.styling {
+      max-width: 100%;
+      width: auto;
+
+      @include breakpoint("mobile-extra-large") {
+        width: 95%;
+      }
+    }
   }
 
   &__fields {
     width: 100%;
-    padding-right: 20%;
-    @include breakpoint("large") {
-      padding-right: 0;
-    }
   }
 
-  &__step-banner {
-    @include breakpoint("large") {
-      display: none;
-    }
+  &__step-counter {
+    text-align: center;
+    font-weight: 700;
+    color: var(--primary-high);
+    text-shadow: 1px 1px 12px var(--secondary);
   }
 
-  &__step.branding .wizard-container__fields {
-    padding-right: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2em;
-
-    .wizard-container__field {
-      flex: 1 1 45%;
-      @include breakpoint("large") {
-        flex: 1 1 100%;
-      }
+  &__step-description {
+    font-size: var(--font-up-2);
+    flex: 1 0 40%;
+    @include breakpoint("tablet") {
+      font-size: var(--font-up-2);
     }
   }
 
@@ -141,29 +141,23 @@ body.wizard {
     }
   }
 
-  &__step.branding .wizard-container__description {
-    max-width: 25em;
-    @include breakpoint("mobile-extra-large") {
-      display: none;
-    }
+  &__step.branding .wizard-container__preview {
+    background-color: var(--primary-very-low);
+    border-radius: 0.5em;
+    padding: 1em;
+    margin-bottom: 1em;
   }
 
   &__step.branding .wizard-container__preview canvas {
     @include breakpoint("mobile-extra-large") {
       max-width: 100%;
-      height: auto;
+      height: auto !important;
     }
   }
 
-  &__step.corporate .wizard-container__fields {
-    display: grid;
-    grid-template-columns: repeat(2, calc(50% - 1em));
-    grid-column-gap: 2em;
-    grid-template-rows: repeat(3, auto);
-    padding-right: 0;
-    @media only screen and (max-device-width: 568px) {
-      display: flex;
-      flex-wrap: wrap;
+  &__step.styling .wizard-container__field.styling-preview-field {
+    label {
+      display: none;
     }
   }
 
@@ -172,34 +166,32 @@ body.wizard {
   }
 
   &__field.checkbox-field {
-    margin-bottom: 3.5em;
-    @media only screen and (max-device-width: 568px) {
-      margin-bottom: 1em;
-    }
+    margin-bottom: 1.5em;
   }
 
   &__field.invalid input {
     outline: 0;
     border: 3px solid var(--danger);
-    animation: bump 0.25s ease-in-out;
-    animation-iteration-count: 2;
+    @media (prefers-reduced-motion: no-preference) {
+      animation: bump 0.25s ease-in-out;
+      animation-iteration-count: 2;
+    }
   }
 
   &__field label {
     display: block;
   }
 
-  &__field.component-styling-preview {
-    display: inline;
-    @media only screen and (max-device-width: 568px) {
+  &__field.text-governing-law,
+  &__field.text-city-for-disputes {
+    @media only screen and (max-width: 568px) {
       display: none;
     }
   }
 
-  &__field.text-governing-law,
-  &__field.text-city-for-disputes {
-    @media only screen and (max-device-width: 568px) {
-      display: none;
+  &__field.dropdown-field.dropdown-homepage-style {
+    .wizard-container__dropdown {
+      height: auto;
     }
   }
 
@@ -208,16 +200,26 @@ body.wizard {
   }
 
   &__sidebar {
-    width: 170px;
+    width: 230px;
     box-sizing: border-box;
     margin-right: 1em;
+
+    @media only screen and (max-width: 925px) {
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
     + .wizard-container__fields {
       padding: 1em;
       background: var(--primary-very-low);
-      width: calc(100% - 170px);
+      width: auto;
       border-radius: 0.5em;
       margin-top: -1em;
+
+      @media only screen and (max-width: 925px) {
+        display: none;
+      }
     }
   }
 
@@ -225,7 +227,6 @@ body.wizard {
     display: flex;
     justify-content: flex-end;
     position: relative;
-    margin-top: -1px;
     padding-right: 10px;
     .preview-nav-button {
       text-align: center;
@@ -248,7 +249,7 @@ body.wizard {
   .previews {
     position: relative;
     height: 320px;
-    width: 100%;
+    width: 628px;
     overflow: hidden;
     background: var(--secondary);
     border-radius: 10px;
@@ -269,11 +270,22 @@ body.wizard {
     }
   }
 
+  &__step-header {
+    text-align: center;
+    margin-bottom: 3em;
+
+    &--emoji img {
+      width: 30px;
+      height: 30px;
+      margin-bottom: 1em;
+    }
+  }
+
   &__step-title {
     font-size: 2.75em;
     color: var(--primary);
-    line-height: $line-height-medium;
-    margin: 0 0 1.5em 0;
+    line-height: var(--line-height-medium);
+    margin: 0 0 0.5em 0;
     @include breakpoint("medium") {
       font-size: var(--font-up-5);
     }
@@ -289,54 +301,16 @@ body.wizard {
   &__step-contents {
     min-height: 37em;
     margin-bottom: 2em;
+
+    @include breakpoint("mobile-extra-large") {
+      min-height: 30em;
+    }
   }
 
   &__step-form {
     flex: 1 0 50%;
-    @media only screen and (max-device-width: 568px) {
+    @media only screen and (max-width: 568px) {
       width: 100%;
-    }
-  }
-
-  @media only screen and (max-device-width: 568px) {
-    &__step.introduction .wizard-container__step-banner,
-    &__step.privacy .wizard-container__step-banner {
-      display: none;
-    }
-  }
-
-  &__step-banner {
-    flex: 0 1 40%;
-  }
-
-  &__step-banner-image {
-    width: 100%;
-  }
-
-  &__step.ready {
-    .wizard-container__step-banner {
-      display: flex;
-      flex: 1 0 100%;
-      gap: 2em;
-    }
-    .wizard-container__step-description {
-      font-size: var(--font-up-3);
-      flex: 1 0 40%;
-      @include breakpoint("tablet") {
-        font-size: var(--font-up-2);
-      }
-    }
-    .wizard-container__step-banner-image {
-      padding-top: 2em;
-      flex: 0 1 40%;
-      margin-left: 2em;
-      max-height: 300px;
-      @include breakpoint("large") {
-        display: none;
-      }
-    }
-    .wizard-container__buttons {
-      flex-direction: row-reverse;
     }
   }
 
@@ -344,33 +318,30 @@ body.wizard {
     font-size: var(--font-0);
   }
 
-  &__step-progress {
+  &__buttons-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    align-items: center;
+    @include breakpoint("mobile-extra-large") {
+      order: 2;
+    }
+  }
+
+  &__buttons-right {
     display: flex;
     align-items: center;
     font-weight: bold;
-    margin-right: -1.5em;
-    @media screen and (max-width: 767px) {
-      display: none;
-    }
 
     @include breakpoint("mobile-extra-large") {
-      margin-bottom: 1em;
-    }
-    .wizard-container__link {
-      color: var(--primary-400);
-      margin: 0 1em;
-      &.inactive {
-        // disabling instead of removing, to hold space
-        pointer-events: none;
-        opacity: 0;
-      }
+      margin-right: 0;
+      flex-direction: column;
     }
   }
 
   &__step-text {
     display: inline;
-    margin-right: 0.25em;
-    @media only screen and (max-device-width: 568px) {
+    @media only screen and (max-width: 568px) {
       display: none;
     }
   }
@@ -400,7 +371,7 @@ body.wizard {
     font-size: var(--font-0);
     border: 0;
     padding: 0.5em;
-    transition: background-color 0.3s;
+    transition: var(--d-button-transition);
     text-decoration: none;
     background-color: var(--secondary);
     color: var(--primary-very-high);
@@ -427,18 +398,13 @@ body.wizard {
     background-color: var(--primary-medium);
   }
 
-  &__button .d-icon-chevron-right {
-    margin-left: 0.25em;
-    font-size: 0.8em;
-  }
-  &__button .d-icon-chevron-left {
-    margin-right: 0.25em;
-    font-size: 0.8em;
-  }
-
   &__button.primary {
     background-color: var(--tertiary);
     color: var(--secondary);
+    @include breakpoint("mobile-extra-large") {
+      order: 1;
+      margin-left: 0;
+    }
   }
   &__button.primary:hover,
   &__button.primary:focus {
@@ -454,26 +420,30 @@ body.wizard {
   }
 
   &__button.configure-more {
-    background-color: var(--primary-200);
-    color: var(--primary);
+    margin-right: 1em;
+    background-color: transparent;
+    color: var(--tertiary);
+    @include breakpoint("mobile-extra-large") {
+      order: 2;
+    }
   }
 
   &__button.configure-more:hover {
-    background-color: var(--primary-300);
+    background-color: transparent;
     color: var(--primary);
   }
 
   &__button.jump-in {
-    background-color: var(--success);
-    color: var(--secondary);
     &:hover {
-      background-color: var(--success-hover);
+      background-color: var(--primary-300);
     }
   }
 
   &__button.finish {
     color: var(--tertiary);
-    padding: 0;
+    @include breakpoint("mobile-extra-large") {
+      order: 2;
+    }
   }
 
   &__button.finish:hover {
@@ -487,6 +457,11 @@ body.wizard {
 
   &__button.next {
     min-width: 70px;
+    margin-left: 1em;
+    @include breakpoint("mobile-extra-large") {
+      order: 1;
+      margin-left: 0;
+    }
   }
 
   &__button.danger {
@@ -508,12 +483,18 @@ body.wizard {
   }
 
   &__button-upload {
-    background-color: var(--primary-low);
     display: block;
+    background-color: transparent;
+    margin-top: 1em;
+    border: 1px solid var(--tertiary-high);
+    text-align: center;
+    color: var(--tertiary-high);
   }
 
   &__button-upload:hover {
-    background-color: var(--primary-low-mid);
+    background-color: transparent;
+    border-color: var(--tertiary-hover);
+    color: var(--tertiary-hover);
   }
 
   &__button-upload svg {
@@ -533,32 +514,16 @@ body.wizard {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    @media only screen and (max-device-width: 568px) {
+    @include breakpoint("mobile-extra-large") {
       flex-direction: column;
       justify-content: center;
+      align-items: stretch;
     }
-  }
-
-  &__buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1em;
-    align-items: center;
-  }
-
-  &__image-upload {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: baseline;
   }
 
   &__label {
     font-weight: bold;
-    font-size: var(--font-up-2);
-    @media only screen and (max-device-width: 568px) {
-      font-size: var(--font-up-1);
-    }
+    font-size: var(--font-up-1);
   }
 
   &__step.styling .wizard-container__label {
@@ -572,14 +537,15 @@ body.wizard {
 
   &__description {
     color: var(--primary-high);
-    font-size: var(--font-down-1);
+    font-size: var(--font-0);
+    font-weight: normal;
     margin: 0.25em 0 0.5em 0;
 
     a {
       margin: 0;
     }
 
-    @media only screen and (max-device-width: 568px) {
+    @media only screen and (max-width: 568px) {
       font-size: var(--font-0);
     }
   }
@@ -587,8 +553,10 @@ body.wizard {
   &__description.extra {
     color: var(--primary-high);
     font-size: var(--font-up-1);
-    margin: 0.25em 0 0.5em 0;
-    max-width: 400px;
+    margin: 0.25em 0 0.5em 3.5em;
+    @media only screen and (max-width: 568px) {
+      margin-left: 2em;
+    }
   }
 
   &__text-input {
@@ -600,7 +568,11 @@ body.wizard {
     padding: 10px;
     background-color: var(--secondary);
     border: 1px solid var(--primary-low-mid);
-    transition: border-color 0.5s;
+  }
+
+  &__dropdown {
+    width: 100%;
+    height: 38px;
   }
 
   &__dropdown .select-kit-header:not(.btn) {
@@ -615,6 +587,19 @@ body.wizard {
     overflow: hidden;
   }
 
+  &__dropdown.homepage-style-selector {
+    .select-kit-row {
+      .name {
+        font-weight: bold;
+      }
+
+      .desc {
+        display: block;
+        margin-top: 0.1em;
+      }
+    }
+  }
+
   &__field.checkbox-field .wizard-container__label {
     cursor: pointer;
     display: inline-block;
@@ -624,13 +609,13 @@ body.wizard {
     display: inline-block;
     background: var(--primary-low-mid);
     border-radius: 16px;
-    width: 58px;
-    height: 32px;
+    width: 50px;
+    height: 28px;
     margin-right: 0.5em;
     position: relative;
     vertical-align: middle;
     transition: background 0.25s;
-    @media only screen and (max-device-width: 568px) {
+    @media only screen and (max-width: 568px) {
       height: 20px;
       width: 35px;
     }
@@ -638,19 +623,31 @@ body.wizard {
   &__checkbox-slider:before,
   &__checkbox-slider:after {
     content: "";
+    display: block;
+    position: absolute;
+  }
+
+  &__checkbox-slider:after {
+    content: "\2713"; // checkmark
+    color: var(--secondary);
+    top: 4px;
+    left: 9px;
+    @media only screen and (max-width: 568px) {
+      top: 3px;
+      left: 5px;
+      font-size: var(--font-down-3);
+    }
   }
 
   &__checkbox-slider:before {
-    display: block;
     background: var(--secondary);
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    position: absolute;
+    width: 20px;
+    height: 20px;
     top: 4px;
     left: 4px;
     transition: left 0.25s;
-    @media only screen and (max-device-width: 568px) {
+    @media only screen and (max-width: 568px) {
       height: 12px;
       width: 12px;
     }
@@ -665,8 +662,8 @@ body.wizard {
     background: var(--tertiary);
   }
   &__checkbox:checked + .wizard-container__checkbox-slider:before {
-    left: 30px;
-    @media only screen and (max-device-width: 568px) {
+    left: 26px;
+    @media only screen and (max-width: 568px) {
       left: 20px;
     }
   }
@@ -681,6 +678,62 @@ body.wizard {
     top: 2px;
   }
 
+  &__radio {
+    position: absolute;
+    visibility: hidden;
+  }
+
+  &__radio-choices {
+    align-items: stretch;
+    display: flex;
+    gap: 1em;
+    @include breakpoint(mobile-extra-large) {
+      flex-direction: column;
+    }
+  }
+
+  &__radio-choice {
+    flex-basis: 0;
+    flex-grow: 1;
+    display: flex;
+
+    &.--selected {
+      .wizard-container__label {
+        background-color: var(--tertiary-very-low);
+        border-color: var(--tertiary-high);
+        border-width: 2px;
+        margin: 0;
+      }
+    }
+
+    .wizard-container__label {
+      border-radius: 4px;
+      border: 1px solid var(--primary-low-mid);
+      flex-grow: 1;
+      margin: 1px 0;
+    }
+
+    label {
+      align-content: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      flex-wrap: wrap;
+      font-weight: normal;
+      padding: 1em;
+      text-align: center;
+
+      .svg-icon {
+        margin-bottom: 0.5em;
+        width: 100%;
+      }
+    }
+  }
+
+  label .svg-icon {
+    top: 2px;
+  }
+
   .wizard-container__image-upload canvas {
     border: 1px solid rgba(0, 0, 0, 0.2);
   }
@@ -688,6 +741,7 @@ body.wizard {
   .finish-installation {
     .wizard-congratulations-wrap {
       display: flex;
+      gap: 1em;
       @media screen and (max-width: 750px) {
         flex-direction: column-reverse;
       }
@@ -701,13 +755,9 @@ body.wizard {
       margin: 0 auto 1em 0;
     }
 
-    &-image {
-      margin-bottom: 1em;
-    }
-
     .tada {
       height: 15vw;
-      max-height: 10em;
+      max-height: 9em;
     }
 
     .help-text {

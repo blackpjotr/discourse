@@ -1,8 +1,7 @@
+import { click, render } from "@ember/test-helpers";
+import { hbs } from "ember-cli-htmlbars";
 import { module, test } from "qunit";
 import { setupRenderingTest } from "discourse/tests/helpers/component-test";
-import { click, render } from "@ember/test-helpers";
-import { count, query } from "discourse/tests/helpers/qunit-helpers";
-import { hbs } from "ember-cli-htmlbars";
 
 module("Integration | Component | d-navigation", function (hooks) {
   setupRenderingTest(hooks);
@@ -20,17 +19,12 @@ module("Integration | Component | d-navigation", function (hooks) {
   });
 
   test("filters indirectly muted categories", async function (assert) {
-    await render(hbs`<DNavigation @filterType="categories" />`);
+    await render(hbs`<DNavigation @filterMode="categories" />`);
     await click(".category-drop .select-kit-header-wrapper");
 
-    assert.strictEqual(
-      count(".category-row"),
-      1,
-      "displays only categories that are not muted"
-    );
-    assert.strictEqual(
-      query(".category-row .badge-category span").textContent.trim(),
-      "dev"
-    );
+    assert
+      .dom(".category-row")
+      .exists({ count: 1 }, "displays only categories that are not muted");
+    assert.dom(".category-row .badge-category span").hasText("dev");
   });
 });

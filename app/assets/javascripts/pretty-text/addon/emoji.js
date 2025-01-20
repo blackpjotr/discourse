@@ -15,10 +15,6 @@ export function registerEmoji(code, url, group) {
   extendedEmojiMap.set(code, { url, group });
 }
 
-export function extendedEmojiList() {
-  return extendedEmojiMap;
-}
-
 const emojiMap = new Map();
 
 // Regex from https://github.com/mathiasbynens/emoji-test-regex-pattern/blob/main/dist/latest/javascript.txt
@@ -39,7 +35,7 @@ Object.entries(aliases).forEach(([name, list]) => {
   list.forEach((alias) => aliasMap.set(alias, name));
 });
 
-function isReplacableInlineEmoji(string, index, inlineEmoji) {
+function isReplaceableInlineEmoji(string, index, inlineEmoji) {
   if (inlineEmoji) {
     return true;
   }
@@ -68,13 +64,13 @@ export function performEmojiUnescape(string, opts) {
 
   const replacementFunction = (m, index) => {
     const isEmoticon = opts.enableEmojiShortcuts && !!allTranslations[m];
-    const isUnicodeEmoticon = !!replacements[m];
+    const isUnicodeEmoticon = !!replacements[m] || !!replacements[m[0]];
     let emojiVal;
 
     if (isEmoticon) {
       emojiVal = allTranslations[m];
     } else if (isUnicodeEmoticon) {
-      emojiVal = replacements[m];
+      emojiVal = replacements[m] || replacements[m[0]];
     } else {
       emojiVal = m.slice(1, m.length - 1);
     }
@@ -88,17 +84,24 @@ export function performEmojiUnescape(string, opts) {
       classes += ` ${opts.class}`;
     }
 
+    // hides denied emojis and aliases from the emoji picker
+    if (opts.emojiDenyList?.includes(emojiVal)) {
+      return "";
+    }
+
     const isReplacable =
       (isEmoticon || hasEndingColon || isUnicodeEmoticon) &&
-      isReplacableInlineEmoji(string, index, opts.inlineEmoji);
+      isReplaceableInlineEmoji(string, index, opts.inlineEmoji);
 
     const title = opts.title ?? emojiVal;
+    const alt = opts.alt ?? opts.title ?? emojiVal;
+    const tabIndex = opts.tabIndex ? ` tabindex='${opts.tabIndex}'` : "";
     return url && isReplacable
       ? `<img width="20" height="20" src='${url}' ${
           opts.skipTitle ? "" : `title='${title}'`
         } ${
           opts.lazy ? "loading='lazy' " : ""
-        }alt='${title}' class='${classes}'>`
+        }alt='${alt}' class='${classes}'${tabIndex}>`
       : m;
   };
 
@@ -115,11 +118,13 @@ export function performEmojiEscape(string, opts) {
   );
 
   const replacementFunction = (m, index) => {
-    if (isReplacableInlineEmoji(string, index, opts.inlineEmoji)) {
-      if (!!allTranslations[m]) {
+    if (isReplaceableInlineEmoji(string, index, opts.inlineEmoji)) {
+      if (allTranslations[m]) {
         return opts.emojiShortcuts ? `:${allTranslations[m]}:` : m;
-      } else if (!!replacements[m]) {
+      } else if (replacements[m]) {
         return `:${replacements[m]}:`;
+      } else if (replacements[m[0]]) {
+        return `:${replacements[m[0]]}:`;
       }
     }
 
@@ -183,6 +188,7 @@ let toSearch;
 export function emojiSearch(term, options) {
   const maxResults = options?.maxResults;
   const diversity = options?.diversity;
+  const exclude = options?.exclude || [];
   if (maxResults === 0) {
     return [];
   }
@@ -199,7 +205,8 @@ export function emojiSearch(term, options) {
 
   function addResult(t) {
     const val = aliasMap.get(t) || t;
-    if (!results.includes(val)) {
+    // dont add skin tone variations or alias of denied emoji to search results
+    if (!results.includes(val) && !exclude.includes(val)) {
       if (diversity && diversity > 1 && isSkinTonableEmoji(val)) {
         results.push(`${val}:t${diversity}`);
       } else {

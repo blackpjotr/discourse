@@ -1,3 +1,5 @@
+@use "sass:math";
+
 .groups-header {
   display: flex;
   flex-wrap: wrap;
@@ -26,6 +28,10 @@
   }
 }
 
+.container.groups-index {
+  background: var(--d-content-background);
+}
+
 .groups-boxes {
   display: grid;
   grid-gap: 1em;
@@ -41,10 +47,8 @@
     color: var(--primary);
 
     .discourse-no-touch & {
-      transition: all 0.25s;
-
       &:hover {
-        box-shadow: shadow("card");
+        box-shadow: var(--shadow-card);
         border-color: var(--primary-low-mid-or-secondary-high);
       }
     }
@@ -86,7 +90,7 @@
           span {
             width: 100%;
             word-break: break-word;
-            line-height: $line-height-medium;
+            line-height: var(--line-height-medium);
           }
         }
       }
@@ -107,14 +111,8 @@
       }
     }
 
-    .groups-info-name {
-      font-size: $font-up-1;
-      font-weight: bold;
-      color: var(--primary);
-    }
-
     $size: 40px;
-    $icon-size: $size / 1.8;
+    $icon-size: math.div($size, 1.8);
 
     .group-avatar-flair {
       display: inline-block;
@@ -147,11 +145,12 @@
     display: inline;
   }
   &.groups-notifications-form {
+    max-width: 33em;
     .control-instructions {
-      color: $primary-medium;
+      color: var(--primary-medium);
       margin-bottom: 10px;
-      font-size: $font-down-1;
-      line-height: $line-height-large;
+      font-size: var(--font-down-1);
+      line-height: var(--line-height-large);
     }
 
     .category-selector,
@@ -171,6 +170,22 @@
       // flip the icon order for the remove button
       order: 2;
       margin: 0 0 0 0.45em;
+    }
+  }
+}
+
+.group-automatic-tooltip {
+  align-items: center;
+  font-size: var(--font-down-2);
+  padding: 0.2em 1em;
+  background-color: var(--primary-low);
+  border-radius: var(--d-button-border-radius);
+
+  .fk-d-tooltip__trigger-container {
+    align-items: center;
+
+    .d-icon {
+      margin-right: 0.25em;
     }
   }
 }

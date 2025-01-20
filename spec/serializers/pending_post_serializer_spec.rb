@@ -4,7 +4,7 @@ RSpec.describe PendingPostSerializer do
   subject(:serializer) { described_class.new(post, scope: guardian, root: false) }
 
   let(:guardian) { Guardian.new(author) }
-  let(:author) { post.created_by }
+  let(:author) { post.target_created_by }
 
   before { freeze_time }
 
@@ -22,7 +22,7 @@ RSpec.describe PendingPostSerializer do
         title: post.payload["title"],
         topic_id: nil,
         topic_url: nil,
-        username: author.username
+        username: author.username,
       }
     end
 
@@ -46,7 +46,7 @@ RSpec.describe PendingPostSerializer do
         title: topic.title,
         topic_id: topic.id,
         topic_url: topic.url,
-        username: author.username
+        username: author.username,
       }
     end
 

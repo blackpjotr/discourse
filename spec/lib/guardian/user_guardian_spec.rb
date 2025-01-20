@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 RSpec.describe UserGuardian do
-
   let :user do
     Fabricate(:user)
   end
@@ -14,9 +13,7 @@ RSpec.describe UserGuardian do
     Fabricate(:admin)
   end
 
-  let(:user_avatar) do
-    Fabricate(:user_avatar, user: user)
-  end
+  let(:user_avatar) { Fabricate(:user_avatar, user: user) }
 
   let :users_upload do
     Upload.new(user_id: user_avatar.user_id, id: 1)
@@ -32,20 +29,17 @@ RSpec.describe UserGuardian do
     Upload.new(user_id: 9999, id: 3)
   end
 
-  let(:moderator_upload) do
-    Upload.new(user_id: moderator.id, id: 4)
-  end
+  let(:moderator_upload) { Upload.new(user_id: moderator.id, id: 4) }
 
-  let(:trust_level_1) { build(:user, trust_level: 1) }
-  let(:trust_level_2) { build(:user, trust_level: 2) }
+  fab!(:trust_level_1)
+  fab!(:trust_level_2)
 
-  describe '#can_pick_avatar?' do
-
+  describe "#can_pick_avatar?" do
     let :guardian do
       Guardian.new(user)
     end
 
-    context 'with anon user' do
+    context "with anon user" do
       let(:guardian) { Guardian.new }
 
       it "should return the right value" do
@@ -53,32 +47,25 @@ RSpec.describe UserGuardian do
       end
     end
 
-    context 'with current user' do
+    context "with current user" do
       it "can not set uploads not owned by current user" do
         expect(guardian.can_pick_avatar?(user_avatar, users_upload)).to eq(true)
         expect(guardian.can_pick_avatar?(user_avatar, already_uploaded)).to eq(true)
 
-        UserUpload.create!(
-          upload_id: not_my_upload.id,
-          user_id: not_my_upload.user_id
-        )
+        UserUpload.create!(upload_id: not_my_upload.id, user_id: not_my_upload.user_id)
 
         expect(guardian.can_pick_avatar?(user_avatar, not_my_upload)).to eq(false)
         expect(guardian.can_pick_avatar?(user_avatar, nil)).to eq(true)
       end
 
       it "can handle uploads that are associated but not directly owned" do
-        UserUpload.create!(
-          upload_id: not_my_upload.id,
-          user_id: user_avatar.user_id
-        )
+        UserUpload.create!(upload_id: not_my_upload.id, user_id: user_avatar.user_id)
 
-        expect(guardian.can_pick_avatar?(user_avatar, not_my_upload))
-          .to eq(true)
+        expect(guardian.can_pick_avatar?(user_avatar, not_my_upload)).to eq(true)
       end
     end
 
-    context 'with moderator' do
+    context "with moderator" do
       let :guardian do
         Guardian.new(moderator)
       end
@@ -92,7 +79,7 @@ RSpec.describe UserGuardian do
       end
     end
 
-    context 'with admin' do
+    context "with admin" do
       let :guardian do
         Guardian.new(admin)
       end
@@ -104,44 +91,224 @@ RSpec.describe UserGuardian do
     end
   end
 
+  describe "#can_see_user?" do
+    it "is always true" do
+      expect(Guardian.new.can_see_user?(anything)).to eq(true)
+    end
+  end
+
   describe "#can_see_profile?" do
+    fab!(:tl0_user) { Fabricate(:user, trust_level: 0) }
+    fab!(:tl1_user) { Fabricate(:user, trust_level: 1) }
+    fab!(:tl2_user) { Fabricate(:user, trust_level: 2) }
+
+    before { tl2_user.user_stat.update!(post_count: 1) }
+
+    context "when viewing the profile of a user with 0 posts" do
+      before { user.user_stat.update!(post_count: 0) }
+
+      context "when hide_new_user_profiles is disabled" do
+        it "allows anonymous to see any profile" do
+          SiteSetting.hide_new_user_profiles = false
+          expect(Guardian.new.can_see_profile?(user)).to eq(true)
+        end
+      end
+
+      context "when site is invite only" do
+        it "allows anonymous to see any profile" do
+          SiteSetting.invite_only = true
+          expect(Guardian.new.can_see_profile?(user)).to eq(true)
+        end
+      end
+
+      context "when site requires user approval" do
+        it "allows anonymous to see any profile" do
+          SiteSetting.must_approve_users = true
+          expect(Guardian.new.can_see_profile?(user)).to eq(true)
+        end
+      end
+
+      it "they can view their own profile" do
+        expect(Guardian.new(user).can_see_profile?(user)).to eq(true)
+      end
+
+      it "an anonymous user cannot view the user's profile" do
+        expect(Guardian.new.can_see_profile?(user)).to eq(false)
+      end
+
+      it "a TL0 user cannot view the user's profile" do
+        expect(Guardian.new(tl0_user).can_see_profile?(user)).to eq(false)
+      end
+
+      it "a TL1 user cannot view the user's profile" do
+        expect(Guardian.new(tl1_user).can_see_profile?(user)).to eq(false)
+      end
+
+      it "a TL2 user can view the user's profile" do
+        expect(Guardian.new(tl2_user).can_see_profile?(user)).to eq(true)
+      end
+
+      it "a moderator can view the user's profile" do
+        expect(Guardian.new(moderator).can_see_profile?(user)).to eq(true)
+      end
+
+      it "an admin can view the user's profile" do
+        expect(Guardian.new(admin).can_see_profile?(user)).to eq(true)
+      end
+
+      context "when the profile is hidden" do
+        before do
+          SiteSetting.allow_users_to_hide_profile = true
+          user.user_option.update!(hide_profile: true)
+        end
+
+        it "they can view their own profile" do
+          expect(Guardian.new(user).can_see_profile?(user)).to eq(true)
+        end
+
+        it "a TL2 user cannot view the user's profile" do
+          expect(Guardian.new(tl2_user).can_see_profile?(user)).to eq(false)
+        end
+
+        it "a moderator can view the user's profile" do
+          expect(Guardian.new(moderator).can_see_profile?(user)).to eq(true)
+        end
+
+        it "an admin can view the user's profile" do
+          expect(Guardian.new(admin).can_see_profile?(user)).to eq(true)
+        end
+      end
+    end
+
+    context "when viewing the profile of a TL0 user with more than 0 posts" do
+      before { tl0_user.user_stat.update!(post_count: 1) }
+
+      it "they can view their own profile" do
+        expect(Guardian.new(tl0_user).can_see_profile?(tl0_user)).to eq(true)
+      end
+
+      it "an anonymous user cannot view the user's profile" do
+        expect(Guardian.new.can_see_profile?(tl0_user)).to eq(false)
+      end
+
+      it "a TL0 user cannot view the user's profile" do
+        expect(Guardian.new(Fabricate(:user, trust_level: 0)).can_see_profile?(tl0_user)).to eq(
+          false,
+        )
+      end
+
+      it "a TL1 user can view the user's profile" do
+        expect(Guardian.new(tl1_user).can_see_profile?(tl0_user)).to eq(true)
+      end
+
+      it "a TL2 user can view the user's profile" do
+        expect(Guardian.new(tl2_user).can_see_profile?(tl0_user)).to eq(true)
+      end
+
+      it "a moderator user can view the user's profile" do
+        expect(Guardian.new(moderator).can_see_profile?(tl0_user)).to eq(true)
+      end
+
+      it "an admin user can view the user's profile" do
+        expect(Guardian.new(admin).can_see_profile?(tl0_user)).to eq(true)
+      end
+
+      context "when the profile is hidden" do
+        before do
+          SiteSetting.allow_users_to_hide_profile = true
+          tl0_user.user_option.update!(hide_profile: true)
+        end
+
+        it "they can view their own profile" do
+          expect(Guardian.new(tl0_user).can_see_profile?(tl0_user)).to eq(true)
+        end
+
+        it "a TL1 user cannot view the user's profile" do
+          expect(Guardian.new(tl1_user).can_see_profile?(tl0_user)).to eq(false)
+        end
+
+        it "a TL2 user cannot view the user's profile" do
+          expect(Guardian.new(tl2_user).can_see_profile?(tl0_user)).to eq(false)
+        end
+
+        it "a moderator user can view the user's profile" do
+          expect(Guardian.new(moderator).can_see_profile?(tl0_user)).to eq(true)
+        end
+
+        it "an admin user can view the user's profile" do
+          expect(Guardian.new(admin).can_see_profile?(tl0_user)).to eq(true)
+        end
+      end
+    end
+
+    context "when the allow_users_to_hide_profile setting is false" do
+      before { SiteSetting.allow_users_to_hide_profile = false }
+
+      it "doesn't hide the profile even if the hide_profile user option is true" do
+        tl2_user.user_option.update!(hide_profile: true)
+
+        expect(Guardian.new(tl0_user).can_see_profile?(tl2_user)).to eq(true)
+        expect(Guardian.new(tl1_user).can_see_profile?(tl2_user)).to eq(true)
+        expect(Guardian.new(admin).can_see_profile?(tl2_user)).to eq(true)
+        expect(Guardian.new(moderator).can_see_profile?(tl2_user)).to eq(true)
+      end
+    end
+
+    context "when the allow_users_to_hide_profile setting is true" do
+      before { SiteSetting.allow_users_to_hide_profile = true }
+
+      it "doesn't allow non-staff users to view the user's profile if the hide_profile user option is true" do
+        tl2_user.user_option.update!(hide_profile: true)
+
+        expect(Guardian.new(tl0_user).can_see_profile?(tl2_user)).to eq(false)
+        expect(Guardian.new(tl1_user).can_see_profile?(tl2_user)).to eq(false)
+
+        expect(Guardian.new(admin).can_see_profile?(tl2_user)).to eq(true)
+        expect(Guardian.new(moderator).can_see_profile?(tl2_user)).to eq(true)
+      end
+
+      it "allows everyone to view the user's profile if the hide_profile user option is false" do
+        tl2_user.user_option.update!(hide_profile: false)
+
+        expect(Guardian.new(tl0_user).can_see_profile?(tl2_user)).to eq(true)
+        expect(Guardian.new(tl1_user).can_see_profile?(tl2_user)).to eq(true)
+
+        expect(Guardian.new(admin).can_see_profile?(tl2_user)).to eq(true)
+        expect(Guardian.new(moderator).can_see_profile?(tl2_user)).to eq(true)
+      end
+    end
+
     it "is false for no user" do
       expect(Guardian.new.can_see_profile?(nil)).to eq(false)
     end
 
-    it "is true for a user whose profile is public" do
-      expect(Guardian.new.can_see_profile?(user)).to eq(true)
+    it "is true for staff users even when they have no posts" do
+      admin.user_stat.update!(post_count: 0)
+      moderator.user_stat.update!(post_count: 0)
+
+      expect(Guardian.new.can_see_profile?(admin)).to eq(true)
+      expect(Guardian.new.can_see_profile?(moderator)).to eq(true)
+    end
+  end
+
+  describe "#can_see_user_actions?" do
+    it "is true by default" do
+      expect(Guardian.new.can_see_user_actions?(nil, [])).to eq(true)
     end
 
-    context "with hidden profile" do
-      # Mixing Fabricate.build() and Fabricate() could cause ID clashes, so override :user
-      fab!(:user) { Fabricate(:user) }
+    context "with 'hide_user_activity_tab' setting" do
+      before { SiteSetting.hide_user_activity_tab = false }
 
-      let(:hidden_user) do
-        result = Fabricate(:user)
-        result.user_option.update_column(:hide_profile_and_presence, true)
-        result
+      it "returns true for self" do
+        expect(Guardian.new(user).can_see_user_actions?(user, [])).to eq(true)
       end
 
-      it "is false for another user" do
-        expect(Guardian.new(user).can_see_profile?(hidden_user)).to eq(false)
+      it "returns true for admin" do
+        expect(Guardian.new(admin).can_see_user_actions?(user, [])).to eq(true)
       end
 
-      it "is false for an anonymous user" do
-        expect(Guardian.new.can_see_profile?(hidden_user)).to eq(false)
-      end
-
-      it "is true for the user themselves" do
-        expect(Guardian.new(hidden_user).can_see_profile?(hidden_user)).to eq(true)
-      end
-
-      it "is true for a staff user" do
-        expect(Guardian.new(admin).can_see_profile?(hidden_user)).to eq(true)
-      end
-
-      it "is true if hiding profiles is disabled" do
-        SiteSetting.allow_users_to_hide_profile = false
-        expect(Guardian.new(user).can_see_profile?(hidden_user)).to eq(true)
+      it "returns false for regular user" do
+        expect(Guardian.new.can_see_user_actions?(user, [])).to eq(true)
       end
     end
   end
@@ -153,7 +320,7 @@ RSpec.describe UserGuardian do
         Fabricate(:user_field),
         Fabricate(:user_field, show_on_profile: true),
         Fabricate(:user_field, show_on_user_card: true),
-        Fabricate(:user_field, show_on_user_card: true, show_on_profile: true)
+        Fabricate(:user_field, show_on_user_card: true, show_on_profile: true),
       ]
     end
 
@@ -198,9 +365,7 @@ RSpec.describe UserGuardian do
       end
 
       context "when user created too many posts" do
-        before do
-          (User::MAX_STAFF_DELETE_POST_COUNT + 1).times { Fabricate(:post, user: user) }
-        end
+        before { (User::MAX_STAFF_DELETE_POST_COUNT + 1).times { Fabricate(:post, user: user) } }
 
         it "is allowed when user created the first post within delete_user_max_post_age days" do
           SiteSetting.delete_user_max_post_age = 2
@@ -214,9 +379,7 @@ RSpec.describe UserGuardian do
       end
 
       context "when user didn't create many posts" do
-        before do
-          (User::MAX_STAFF_DELETE_POST_COUNT - 1).times { Fabricate(:post, user: user) }
-        end
+        before { (User::MAX_STAFF_DELETE_POST_COUNT - 1).times { Fabricate(:post, user: user) } }
 
         it "is allowed when even when user created the first post before delete_user_max_post_age days" do
           SiteSetting.delete_user_max_post_age = 2
@@ -258,10 +421,15 @@ RSpec.describe UserGuardian do
       end
 
       it "is allowed when user responded to PM from system user" do
-        topic = Fabricate(:private_message_topic, user: Discourse.system_user, topic_allowed_users: [
-          Fabricate.build(:topic_allowed_user, user: Discourse.system_user),
-          Fabricate.build(:topic_allowed_user, user: user)
-        ])
+        topic =
+          Fabricate(
+            :private_message_topic,
+            user: Discourse.system_user,
+            topic_allowed_users: [
+              Fabricate.build(:topic_allowed_user, user: Discourse.system_user),
+              Fabricate.build(:topic_allowed_user, user: user),
+            ],
+          )
 
         Fabricate(:post, user: user, topic: topic)
         expect(guardian.can_delete_user?(user)).to eq(true)
@@ -271,9 +439,12 @@ RSpec.describe UserGuardian do
       end
 
       it "is allowed when user created multiple posts in PMs to themselves" do
-        topic = Fabricate(:private_message_topic, user: user, topic_allowed_users: [
-          Fabricate.build(:topic_allowed_user, user: user)
-        ])
+        topic =
+          Fabricate(
+            :private_message_topic,
+            user: user,
+            topic_allowed_users: [Fabricate.build(:topic_allowed_user, user: user)],
+          )
 
         Fabricate(:post, user: user, topic: topic)
         Fabricate(:post, user: user, topic: topic)
@@ -281,10 +452,15 @@ RSpec.describe UserGuardian do
       end
 
       it "isn't allowed when user created multiple posts in PMs sent to other users" do
-        topic = Fabricate(:private_message_topic, user: user, topic_allowed_users: [
-          Fabricate.build(:topic_allowed_user, user: user),
-          Fabricate.build(:topic_allowed_user, user: Fabricate(:user))
-        ])
+        topic =
+          Fabricate(
+            :private_message_topic,
+            user: user,
+            topic_allowed_users: [
+              Fabricate.build(:topic_allowed_user, user: user),
+              Fabricate.build(:topic_allowed_user, user: Fabricate(:user)),
+            ],
+          )
 
         Fabricate(:post, user: user, topic: topic)
         expect(guardian.can_delete_user?(user)).to eq(true)
@@ -294,12 +470,16 @@ RSpec.describe UserGuardian do
       end
 
       it "isn't allowed when user created multiple posts in PMs sent to groups" do
-        topic = Fabricate(:private_message_topic, user: user, topic_allowed_users: [
-          Fabricate.build(:topic_allowed_user, user: user)
-        ], topic_allowed_groups: [
-          Fabricate.build(:topic_allowed_group, group: Fabricate(:group)),
-          Fabricate.build(:topic_allowed_group, group: Fabricate(:group))
-        ])
+        topic =
+          Fabricate(
+            :private_message_topic,
+            user: user,
+            topic_allowed_users: [Fabricate.build(:topic_allowed_user, user: user)],
+            topic_allowed_groups: [
+              Fabricate.build(:topic_allowed_group, group: Fabricate(:group)),
+              Fabricate.build(:topic_allowed_group, group: Fabricate(:group)),
+            ],
+          )
 
         Fabricate(:post, user: user, topic: topic)
         expect(guardian.can_delete_user?(user)).to eq(true)
@@ -372,12 +552,12 @@ RSpec.describe UserGuardian do
   end
 
   describe "#can_see_review_queue?" do
-    it 'returns true when the user is a staff member' do
+    it "returns true when the user is a staff member" do
       guardian = Guardian.new(moderator)
       expect(guardian.can_see_review_queue?).to eq(true)
     end
 
-    it 'returns false for a regular user' do
+    it "returns false for a regular user" do
       guardian = Guardian.new(user)
       expect(guardian.can_see_review_queue?).to eq(false)
     end
@@ -387,70 +567,75 @@ RSpec.describe UserGuardian do
       group.add(user)
       guardian = Guardian.new(user)
       SiteSetting.enable_category_group_moderation = true
+      category = Fabricate(:category)
+      Fabricate(:category_moderation_group, category:, group:)
 
-      Fabricate(:reviewable_flagged_post, reviewable_by_group: group, category: nil)
+      Fabricate(:reviewable_flagged_post, category:)
 
       expect(guardian.can_see_review_queue?).to eq(true)
     end
 
-    it 'returns false if category group review is disabled' do
+    it "returns false if category group review is disabled" do
       group = Fabricate(:group)
       group.add(user)
       guardian = Guardian.new(user)
       SiteSetting.enable_category_group_moderation = false
+      category = Fabricate(:category)
+      Fabricate(:category_moderation_group, category:, group:)
 
-      Fabricate(:reviewable_flagged_post, reviewable_by_group: group, category: nil)
+      Fabricate(:reviewable_flagged_post, category:)
 
       expect(guardian.can_see_review_queue?).to eq(false)
     end
 
-    it 'returns false if the reviewable is under a read restricted category' do
+    it "returns false if the reviewable is under a read restricted category" do
       group = Fabricate(:group)
       group.add(user)
       guardian = Guardian.new(user)
       SiteSetting.enable_category_group_moderation = true
       category = Fabricate(:category, read_restricted: true)
+      Fabricate(:category_moderation_group, category:, group:)
 
-      Fabricate(:reviewable_flagged_post, reviewable_by_group: group, category: category)
+      Fabricate(:reviewable_flagged_post, category: category)
 
       expect(guardian.can_see_review_queue?).to eq(false)
     end
   end
 
-  describe 'can_upload_profile_header' do
-    it 'returns true if it is an admin' do
+  describe "can_upload_profile_header" do
+    it "returns true if it is an admin" do
       guardian = Guardian.new(admin)
       expect(guardian.can_upload_profile_header?(admin)).to eq(true)
     end
 
-    it 'returns true if the trust level of user matches site setting' do
+    it "returns true if the group of user matches site setting" do
       guardian = Guardian.new(trust_level_2)
-      SiteSetting.min_trust_level_to_allow_profile_background = 2
+      SiteSetting.profile_background_allowed_groups = Group::AUTO_GROUPS[:trust_level_2]
       expect(guardian.can_upload_profile_header?(trust_level_2)).to eq(true)
     end
 
-    it 'returns false if the trust level of user does not matches site setting' do
+    it "returns false if the group of user does not matches site setting" do
       guardian = Guardian.new(trust_level_1)
-      SiteSetting.min_trust_level_to_allow_profile_background = 2
+      SiteSetting.profile_background_allowed_groups = Group::AUTO_GROUPS[:trust_level_2]
       expect(guardian.can_upload_profile_header?(trust_level_1)).to eq(false)
     end
   end
 
-  describe 'can_upload_user_card_background' do
-    it 'returns true if it is an admin' do
+  describe "can_upload_user_card_background" do
+    it "returns true if it is an admin" do
       guardian = Guardian.new(admin)
       expect(guardian.can_upload_user_card_background?(admin)).to eq(true)
     end
 
-    it 'returns true if the trust level of user matches site setting' do
+    it "returns true if the trust level of user matches site setting" do
       guardian = Guardian.new(trust_level_2)
-      SiteSetting.min_trust_level_to_allow_user_card_background = 2
+      SiteSetting.user_card_background_allowed_groups = Group::AUTO_GROUPS[:trust_level_2]
       expect(guardian.can_upload_user_card_background?(trust_level_2)).to eq(true)
     end
 
-    it 'returns false if the trust level of user does not matches site setting' do
+    it "returns false if the trust level of user does not matches site setting" do
       guardian = Guardian.new(trust_level_1)
-      SiteSetting.min_trust_level_to_allow_user_card_background = 2
+      SiteSetting.user_card_background_allowed_groups = Group::AUTO_GROUPS[:trust_level_2]
       expect(guardian.can_upload_user_card_background?(trust_level_1)).to eq(false)
     end
   end

@@ -1,16 +1,11 @@
-import {
-  acceptance,
-  count,
-  exists,
-  query,
-  visible,
-} from "discourse/tests/helpers/qunit-helpers";
 import { click, currentURL, fillIn, visit } from "@ember/test-helpers";
-import DiscourseURL from "discourse/lib/url";
-import selectKit from "discourse/tests/helpers/select-kit-helper";
-import sinon from "sinon";
 import { test } from "qunit";
+import sinon from "sinon";
+import DiscourseURL from "discourse/lib/url";
 import pretender from "discourse/tests/helpers/create-pretender";
+import { acceptance } from "discourse/tests/helpers/qunit-helpers";
+import selectKit from "discourse/tests/helpers/select-kit-helper";
+import { i18n } from "discourse-i18n";
 
 acceptance("Category Edit", function (needs) {
   needs.user();
@@ -23,22 +18,13 @@ acceptance("Category Edit", function (needs) {
     assert.strictEqual(
       currentURL(),
       "/c/bug/edit/general",
-      "it jumps to the correct screen"
+      "jumps to the correct screen"
     );
 
-    assert.strictEqual(
-      query(".category-breadcrumb .badge-category").innerText,
-      "bug"
-    );
-    assert.strictEqual(
-      query(".category-color-editor .badge-category").innerText,
-      "bug"
-    );
+    assert.dom(".category-breadcrumb .badge-category").hasText("bug");
+    assert.dom(".category-color-editor .badge-category").hasText("bug");
     await fillIn("input.category-name", "testing");
-    assert.strictEqual(
-      query(".category-color-editor .badge-category").innerText,
-      "testing"
-    );
+    assert.dom(".category-color-editor .badge-category").hasText("testing");
 
     await fillIn(".edit-text-color input", "ff0000");
 
@@ -49,7 +35,7 @@ acceptance("Category Edit", function (needs) {
     assert.strictEqual(
       currentURL(),
       "/c/bug/edit/general",
-      "it stays on the edit screen"
+      "stays on the edit screen"
     );
 
     await visit("/c/bug/edit/settings");
@@ -61,13 +47,13 @@ acceptance("Category Edit", function (needs) {
     assert.strictEqual(
       currentURL(),
       "/c/bug/edit/settings",
-      "it stays on the edit screen"
+      "stays on the edit screen"
     );
 
     sinon.stub(DiscourseURL, "routeTo");
 
     await click(".edit-category-security a");
-    assert.ok(
+    assert.true(
       DiscourseURL.routeTo.calledWith("/c/bug/edit/security"),
       "tab routing works"
     );
@@ -76,17 +62,19 @@ acceptance("Category Edit", function (needs) {
   test("Editing required tag groups", async function (assert) {
     await visit("/c/bug/edit/tags");
 
-    assert.ok(exists(".required-tag-groups"));
-    assert.strictEqual(count(".required-tag-group-row"), 0);
+    assert.dom(".minimum-required-tags").exists();
+
+    assert.dom(".required-tag-groups").exists();
+    assert.dom(".required-tag-group-row").doesNotExist();
 
     await click(".add-required-tag-group");
-    assert.strictEqual(count(".required-tag-group-row"), 1);
+    assert.dom(".required-tag-group-row").exists({ count: 1 });
 
     await click(".add-required-tag-group");
-    assert.strictEqual(count(".required-tag-group-row"), 2);
+    assert.dom(".required-tag-group-row").exists({ count: 2 });
 
     await click(".delete-required-tag-group");
-    assert.strictEqual(count(".required-tag-group-row"), 1);
+    assert.dom(".required-tag-group-row").exists({ count: 1 });
 
     const tagGroupChooser = selectKit(
       ".required-tag-group-row .tag-group-chooser"
@@ -95,13 +83,13 @@ acceptance("Category Edit", function (needs) {
     await tagGroupChooser.selectRowByValue("TagGroup1");
 
     await click("#save-category");
-    assert.strictEqual(count(".required-tag-group-row"), 1);
+    assert.dom(".required-tag-group-row").exists({ count: 1 });
 
     await click(".delete-required-tag-group");
-    assert.strictEqual(count(".required-tag-group-row"), 0);
+    assert.dom(".required-tag-group-row").doesNotExist();
 
     await click("#save-category");
-    assert.strictEqual(count(".required-tag-group-row"), 0);
+    assert.dom(".required-tag-group-row").doesNotExist();
   });
 
   test("Editing allowed tags and tag groups", async function (assert) {
@@ -111,6 +99,7 @@ acceptance("Category Edit", function (needs) {
     await allowedTagChooser.expand();
     await allowedTagChooser.selectRowByValue("monkey");
 
+    await allowedTagChooser.collapse();
     const allowedTagGroupChooser = selectKit("#category-allowed-tag-groups");
     await allowedTagGroupChooser.expand();
     await allowedTagGroupChooser.selectRowByValue("TagGroup1");
@@ -124,6 +113,7 @@ acceptance("Category Edit", function (needs) {
     assert.deepEqual(payload.allowed_tags, ["monkey"]);
     assert.deepEqual(payload.allowed_tag_groups, ["TagGroup1"]);
 
+    await allowedTagGroupChooser.collapse();
     await allowedTagChooser.expand();
     await allowedTagChooser.deselectItemByValue("monkey");
 
@@ -140,12 +130,42 @@ acceptance("Category Edit", function (needs) {
     assert.deepEqual(removePayload.allowed_tag_groups, []);
   });
 
+  test("Editing parent category (disabled Uncategorized)", async function (assert) {
+    this.siteSettings.allow_uncategorized_topics = false;
+
+    await visit("/c/bug/edit");
+    const categoryChooser = selectKit(".category-chooser");
+    await categoryChooser.expand();
+    await categoryChooser.selectRowByValue(6);
+
+    await categoryChooser.expand();
+
+    const names = [...categoryChooser.rows()].map((row) => row.dataset.name);
+    assert.true(names.includes("(no category)"));
+    assert.false(names.includes("Uncategorized"));
+  });
+
+  test("Editing parent category (enabled Uncategorized)", async function (assert) {
+    this.siteSettings.allow_uncategorized_topics = true;
+
+    await visit("/c/bug/edit");
+    const categoryChooser = selectKit(".category-chooser");
+    await categoryChooser.expand();
+    await categoryChooser.selectRowByValue(6);
+
+    await categoryChooser.expand();
+
+    const names = [...categoryChooser.rows()].map((row) => row.dataset.name);
+    assert.true(names.includes("(no category)"));
+    assert.false(names.includes("Uncategorized"));
+  });
+
   test("Index Route", async function (assert) {
     await visit("/c/bug/edit");
     assert.strictEqual(
       currentURL(),
       "/c/bug/edit/general",
-      "it redirects to the general tab"
+      "redirects to the general tab"
     );
   });
 
@@ -154,9 +174,9 @@ acceptance("Category Edit", function (needs) {
     assert.strictEqual(
       currentURL(),
       "/c/1-category/edit/general",
-      "it goes to the general tab"
+      "goes to the general tab"
     );
-    assert.strictEqual(query("input.category-name").value, "bug");
+    assert.dom("input.category-name").hasValue("bug");
   });
 
   test("Error Saving", async function (assert) {
@@ -164,30 +184,57 @@ acceptance("Category Edit", function (needs) {
     await fillIn(".email-in", "duplicate@example.com");
     await click("#save-category");
 
-    assert.ok(visible(".bootbox"));
-    assert.strictEqual(
-      query(".bootbox .modal-body").innerHTML,
-      "duplicate email"
+    assert.dom(".dialog-body").hasText(
+      i18n("generic_error_with_reason", {
+        error: "duplicate email",
+      })
     );
 
-    await click(".bootbox .btn-primary");
-    assert.ok(!visible(".bootbox"));
+    await click(".dialog-footer .btn-primary");
+    assert.dom(".dialog-body").doesNotExist();
+  });
+
+  test("Nested subcategory error when saving", async function (assert) {
+    await visit("/c/bug/edit");
+
+    const categoryChooser = selectKit(".category-chooser.single-select");
+    await categoryChooser.expand();
+    await categoryChooser.selectRowByValue(1002);
+
+    await click("#save-category");
+
+    assert.dom(".dialog-body").hasText(
+      i18n("generic_error_with_reason", {
+        error: "subcategory nested under another subcategory",
+      })
+    );
+
+    await click(".dialog-footer .btn-primary");
+    assert.dom(".dialog-body").doesNotExist();
+
+    assert
+      .dom(".category-breadcrumb .category-drop-header[data-value='1002']")
+      .doesNotExist("doesn't show the nested subcategory in the breadcrumb");
+
+    assert
+      .dom(".category-breadcrumb .single-select-header[data-value='1002']")
+      .doesNotExist("clears the category chooser");
   });
 
   test("Subcategory list settings", async function (assert) {
     await visit("/c/bug/edit/settings");
 
-    assert.ok(
-      !visible(".subcategory-list-style-field"),
-      "subcategory list style isn't visible by default"
-    );
+    assert
+      .dom(".subcategory-list-style-field")
+      .doesNotExist("subcategory list style isn't visible by default");
 
     await click(".show-subcategory-list-field input[type=checkbox]");
 
-    assert.ok(
-      visible(".subcategory-list-style-field"),
-      "subcategory list style is shown if show subcategory list is checked"
-    );
+    assert
+      .dom(".subcategory-list-style-field")
+      .exists(
+        "subcategory list style is shown if show subcategory list is checked"
+      );
 
     await visit("/c/bug/edit/general");
 
@@ -199,14 +246,14 @@ acceptance("Category Edit", function (needs) {
 
     await visit("/c/bug/edit/settings");
 
-    assert.ok(
-      !visible(".show-subcategory-list-field"),
-      "show subcategory list isn't visible for child categories"
-    );
-    assert.ok(
-      !visible(".subcategory-list-style-field"),
-      "subcategory list style isn't visible for child categories"
-    );
+    assert
+      .dom(".show-subcategory-list-field")
+      .doesNotExist("show subcategory list isn't visible for child categories");
+    assert
+      .dom(".subcategory-list-style-field")
+      .doesNotExist(
+        "subcategory list style isn't visible for child categories"
+      );
   });
 });
 

@@ -1,14 +1,10 @@
-import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
-import { clearPopupMenuOptionsCallback } from "discourse/controllers/composer";
-import { test } from "qunit";
 import { click, visit } from "@ember/test-helpers";
+import { test } from "qunit";
+import { acceptance } from "discourse/tests/helpers/qunit-helpers";
 
 acceptance("Poll in a post reply history", function (needs) {
   needs.user();
   needs.settings({ poll_enabled: true });
-  needs.hooks.beforeEach(() => {
-    clearPopupMenuOptionsCallback();
-  });
 
   needs.pretender((server, helper) => {
     server.get("/t/topic_with_poll_in_post_reply_history.json", () => {
@@ -443,7 +439,7 @@ acceptance("Poll in a post reply history", function (needs) {
   test("renders and extends", async function (assert) {
     await visit("/t/-/topic_with_poll_in_post_reply_history");
     await click(".reply-to-tab");
-    assert.ok(exists(".poll"), "poll is rendered");
-    assert.ok(exists(".poll-buttons"), "poll is extended");
+    assert.dom(".poll").exists("poll is rendered");
+    assert.dom(".poll-buttons").exists("poll is extended");
   });
 });

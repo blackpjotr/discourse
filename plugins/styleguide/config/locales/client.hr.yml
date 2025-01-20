@@ -27,8 +27,6 @@ hr:
         icons:
           title: "Ikone"
           full_list: "Pogledajte cijeli popis ikona Font Awesome"
-        input_fields:
-          title: "Polja za unos"
         buttons:
           title: "Gumbi"
         dropdowns:
@@ -87,6 +85,9 @@ hr:
           title: "Spinneri"
         empty_state:
           title: "Prazno stanje"
-        rich_tooltip:
+        tooltips:
           description: "Opis"
           header: "Uzglavlje"
+          hover_to_see: "Zadržite pokazivač miša da biste vidjeli savjet alata"
+        char_counter:
+          placeholder: "Unesite svoj tekst ovdje..."

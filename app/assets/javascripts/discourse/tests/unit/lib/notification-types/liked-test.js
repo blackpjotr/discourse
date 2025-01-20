@@ -1,10 +1,10 @@
-import { discourseModule } from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
-import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
-import { deepMerge } from "discourse-common/lib/object";
-import { createRenderDirector } from "discourse/tests/helpers/notification-types-helper";
+import { setupTest } from "ember-qunit";
+import { module, test } from "qunit";
+import { deepMerge } from "discourse/lib/object";
 import Notification from "discourse/models/notification";
-import I18n from "I18n";
+import { NOTIFICATION_TYPES } from "discourse/tests/fixtures/concerns/notification-types";
+import { createRenderDirector } from "discourse/tests/helpers/notification-types-helper";
+import { i18n } from "discourse-i18n";
 
 function getNotification(overrides = {}) {
   return Notification.create(
@@ -33,7 +33,9 @@ function getNotification(overrides = {}) {
   );
 }
 
-discourseModule("Unit | Notification Types | liked", function () {
+module("Unit | Notification Types | liked", function (hooks) {
+  setupTest(hooks);
+
   test("label", function (assert) {
     const notification = getNotification();
     const director = createRenderDirector(
@@ -44,7 +46,7 @@ discourseModule("Unit | Notification Types | liked", function () {
     notification.data.count = 2;
     assert.strictEqual(
       director.label,
-      I18n.t("notifications.liked_by_2_users", {
+      i18n("notifications.liked_by_2_users", {
         username: "osama",
         username2: "shrek",
       }),
@@ -54,10 +56,9 @@ discourseModule("Unit | Notification Types | liked", function () {
     notification.data.count = 3;
     assert.strictEqual(
       director.label,
-      I18n.t("notifications.liked_by_multiple_users", {
+      i18n("notifications.liked_by_multiple_users", {
         username: "osama",
-        username2: "shrek",
-        count: 1,
+        count: 2,
       }),
       "concatenates 2 usernames with comma and displays the remaining count when count larger than 2"
     );

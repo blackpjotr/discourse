@@ -1,5 +1,5 @@
-import getURL from "discourse-common/lib/get-url";
 import { next } from "@ember/runloop";
+import getURL from "discourse/lib/get-url";
 let _started = false;
 let cache = {};
 let transitionCount = 0;
@@ -42,8 +42,6 @@ export function startPageTracking(router, appEvents, documentTitle) {
         url,
         title: documentTitle.getTitle(),
         currentRouteName: router.currentRouteName,
-        currentRouteParams: router.currentRoute.params,
-        currentRouteParentName: router.currentRoute.parent?.name,
         replacedOnlyQueryParams,
       });
     });
