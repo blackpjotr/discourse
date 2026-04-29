@@ -3133,6 +3133,16 @@ en:
         placeholder: "Enter translation for post here..."
         show_raw_markdown: "Show raw"
 
+      change_reply_to:
+        title: "Change reply target"
+        hint: "Scroll the timeline to find the post you'd like to reply to."
+        current_selection: "Selected: post #%{post_number} by @%{username}"
+        invalid_target: "Choose a post earlier than the one you're editing."
+        submit: "Set reply target"
+        open: "Change which post this replies to"
+        open_from_menu: "Reply to another post"
+        remove: "Remove reply target"
+
       group_mentioned_limit:
         one: "<b>Warning!</b> You mentioned <a href='%{group_link}'>%{group}</a>, however this group has more members than the administrator configured mention limit of %{count} user. Nobody will be notified."
         other: "<b>Warning!</b> You mentioned <a href='%{group_link}'>%{group}</a>, however this group has more members than the administrator configured mention limit of %{count} users. Nobody will be notified."
@@ -4733,6 +4743,8 @@ en:
         locale:
           no_locale_set: "No language set"
           locale_removed: "Language removed"
+        reply_to:
+          none: "No reply target"
         controls:
           first: "First revision"
           previous: "Previous revision"
